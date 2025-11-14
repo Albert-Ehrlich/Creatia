@@ -1487,3 +1487,59 @@ section {
     font-size: 0.9rem;
   }
 }
+
+/* Google Button */
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 18px auto 0 auto;
+  width: 100%;
+  max-width: 360px;
+  padding: 14px 16px;
+  background: linear-gradient(139deg, #107386, #00a0ff); /* cyan gradient */
+  color: white;
+  border-radius: 10px;
+  border: none;
+  text-decoration: none;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 5px 15px rgba(0, 160, 255, 0.25);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.google-btn .google-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.15);
+  color: white;
+  font-weight: 900;
+}
+
+.google-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.12);
+  transition: left 0.3s ease;
+  z-index: 0;
+}
+
+.google-btn span { position: relative; z-index: 1; color: white; }
+
+.google-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0, 160, 255, 0.35); color: white; }
+
+.google-btn:hover::before { left: 100%; }
+
+.google-btn:hover .google-icon { color: white; }
