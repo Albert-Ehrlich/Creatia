@@ -6,22 +6,22 @@
 <section class="login-page">
   <div class="login-overlay"></div>
   <div class="login-container">
-    <h2>Login</h2>
+    <h2>Login to Creatia</h2>
 
     {% if error %}
     <div class="error-message show">{{ error }}</div>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+    <form method="POST" action="{{ url_for('login') }}" id="loginForm" class="login-form">
       {{ form.csrf_token }}
 
       <div class="form-group">
-        {{ form.username.label }}
+        {{ form.username.label(class_='form-label') }}
         {{ form.username(class_='form-control', placeholder='Enter your username') }}
       </div>
 
       <div class="form-group">
-        {{ form.password.label }}
+        {{ form.password.label(class_='form-label') }}
         {{ form.password(class_='form-control', placeholder='Enter your password') }}
       </div>
 
