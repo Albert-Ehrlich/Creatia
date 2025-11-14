@@ -33,7 +33,12 @@
 
       <div class="form-group">
         {{ form.password.label(class_='form-label') }}
-        {{ form.password(class_='form-control', placeholder='Create a password') }}
+        <div class="password-wrapper">
+          {{ form.password(class_='form-control', placeholder='Create a password') }}
+          <button type="button" class="password-toggle" title="Show/Hide password">
+            <span class="eye-icon">👁</span>
+          </button>
+        </div>
         {% if form.password.errors %}
           <div class="field-error">{{ form.password.errors[0] }}</div>
         {% endif %}
@@ -41,7 +46,12 @@
 
       <div class="form-group">
         {{ form.password_confirm.label(class_='form-label') }}
-        {{ form.password_confirm(class_='form-control', placeholder='Confirm password') }}
+        <div class="password-wrapper">
+          {{ form.password_confirm(class_='form-control', placeholder='Confirm password') }}
+          <button type="button" class="password-toggle" title="Show/Hide password">
+            <span class="eye-icon">👁</span>
+          </button>
+        </div>
         {% if form.password_confirm.errors %}
           <div class="field-error">{{ form.password_confirm.errors[0] }}</div>
         {% endif %}

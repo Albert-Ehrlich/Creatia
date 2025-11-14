@@ -2,32 +2,108 @@
 {% block content %}
 <div class="content-wrapper">
   <section class="content-header">
-    <h1>My Dashboard</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+      <div>
+        <h1>My Dashboard</h1>
+        <p style="margin: 5px 0 0 0; color: #999; font-size: 0.9rem;">Your personal workspace and activity</p>
+      </div>
+      <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+    </div>
   </section>
+
   <section class="content">
-    <div class="dashboard-card">
-      <h2>Welcome, {{ user.username }}! 👋</h2>
-      
-      <div class="user-info">
+    <!-- Welcome Card -->
+    <div class="dashboard-card welcome-card">
+      <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: space-between;">
+        <div style="flex: 1; min-width: 250px;">
+          <h2>Welcome back, {{ user.username }}! 👋</h2>
+          <p style="color: #666; margin: 10px 0 0 0;">You're all set. Here's your workspace overview.</p>
+        </div>
+        <div class="user-stats">
+          <div class="stat-item">
+            <div class="stat-icon">📋</div>
+            <div>
+              <div class="stat-count">0</div>
+              <div class="stat-label">Tasks</div>
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-icon">✅</div>
+            <div>
+              <div class="stat-count">0</div>
+              <div class="stat-label">Completed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="user-info" style="margin-top: 20px;">
+        <p><strong>Username:</strong> {{ user.username }}</p>
         <p><strong>Email:</strong> {{ user.email }}</p>
-        <p><strong>Role:</strong> <span class="role-badge">{{ user.role }}</span></p>
         <p><strong>Member Since:</strong> {{ user.created_at.strftime('%B %d, %Y') }}</p>
         {% if user.last_login %}
           <p><strong>Last Login:</strong> {{ user.last_login.strftime('%B %d, %Y at %I:%M %p') }}</p>
         {% else %}
-          <p><strong>Last Login:</strong> This is your first login!</p>
+          <p><strong>Last Login:</strong> This is your first login! Welcome aboard! 🎉</p>
         {% endif %}
-      </div>
-
-      <div class="dashboard-actions">
-        <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
       </div>
     </div>
 
-    <div class="dashboard-card">
-      <h3>Your Tasks</h3>
-      <p>Welcome, team member! View your assigned jobs here.</p>
-      <p style="color: #999; font-size: 0.9rem;">Tasks feature coming soon...</p>
+    <!-- Quick Actions & Info -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+      <div class="dashboard-card">
+        <h3>📝 Your Tasks</h3>
+        <p>View and manage your assigned tasks. Track progress and update status as you work.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem; text-align: center; color: #999;">
+          No tasks assigned yet
+        </div>
+        <a href="#" class="btn-action">View Tasks</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>📊 My Projects</h3>
+        <p>See all projects you're involved in. Check project status, deadlines, and team members.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem; text-align: center; color: #999;">
+          No projects joined yet
+        </div>
+        <a href="#" class="btn-action">Browse Projects</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>👤 Profile Settings</h3>
+        <p>Update your profile information, password, and account preferences.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.85rem;">
+          <p style="margin: 0;">Email Notifications: <strong>Enabled</strong></p>
+        </div>
+        <a href="#" class="btn-action">Edit Profile</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>📅 Activity</h3>
+        <p>View your recent activity and engagement history on the platform.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem; text-align: center; color: #999;">
+          Just logged in
+        </div>
+        <a href="#" class="btn-action">View Activity</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>💬 Messages</h3>
+        <p>Communicate with your team members and managers through direct messages.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.85rem;">
+          <p style="margin: 0;">New Messages: <strong>0</strong></p>
+        </div>
+        <a href="#" class="btn-action">Check Messages</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>🎯 Goals</h3>
+        <p>Set and track personal goals to improve your productivity and performance.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem; text-align: center; color: #999;">
+          No goals set yet
+        </div>
+        <a href="#" class="btn-action">Set Goals</a>
+      </div>
     </div>
   </section>
 </div>
@@ -35,7 +111,7 @@
 <style>
 .content-wrapper {
   padding: 30px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -45,7 +121,11 @@
 
 .content-header h1 {
   color: rgb(69, 80, 91);
-  font-size: 2rem;
+  font-size: 2.5rem;
+  margin: 0;
+}
+
+.content-header p {
   margin: 0;
 }
 
@@ -56,28 +136,70 @@
 
 .dashboard-card {
   background: white;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-left: 4px solid rgb(5, 99, 187);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 35px rgba(0, 0, 0, 0.12);
+}
+
+.welcome-card {
+  border-left-color: #00c410;
+  background: linear-gradient(135deg, rgba(0,196,16,0.02), rgba(0,124,114,0.02));
 }
 
 .dashboard-card h2 {
   color: rgb(69, 80, 91);
   margin-top: 0;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  font-size: 1.8rem;
 }
 
 .dashboard-card h3 {
   color: rgb(5, 99, 187);
   margin-top: 0;
+  font-size: 1.2rem;
+}
+
+.user-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-radius: 10px;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+}
+
+.stat-count {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: rgb(69, 80, 91);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #999;
+  margin-top: 2px;
 }
 
 .user-info {
   background: #f8f9fa;
   padding: 20px;
   border-radius: 8px;
-  margin: 20px 0;
 }
 
 .user-info p {
@@ -86,20 +208,22 @@
   line-height: 1.6;
 }
 
-.role-badge {
+.btn-action {
   display: inline-block;
   background: linear-gradient(139deg, #007c72, #00c410);
   color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
   font-weight: 600;
-  font-size: 0.85rem;
+  margin-top: 15px;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
-.dashboard-actions {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e4e8;
+.btn-action:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 124, 114, 0.3);
 }
 
 .btn-logout {
@@ -111,11 +235,27 @@
   text-decoration: none;
   font-weight: 600;
   transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
 }
 
 .btn-logout:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+}
+
+@media (max-width: 768px) {
+  .content-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .user-stats {
+    flex-direction: column;
+  }
+  
+  .dashboard-card {
+    padding: 20px;
+  }
 }
 </style>
 {% endblock %}

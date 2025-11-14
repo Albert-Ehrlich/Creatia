@@ -2,16 +2,36 @@
 {% block content %}
 <div class="content-wrapper">
   <section class="content-header">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <h1>Admin Dashboard</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+      <div>
+        <h1>Admin Dashboard</h1>
+        <p style="margin: 5px 0 0 0; color: #999; font-size: 0.9rem;">System Administration & Management</p>
+      </div>
       <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
     </div>
   </section>
+
+  <!-- Welcome Card -->
   <section class="content">
-    <div class="dashboard-card">
-      <h2>Welcome, Admin {{ user.username }}! 👑</h2>
+    <div class="dashboard-card welcome-card">
+      <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 250px;">
+          <h2>Welcome, Admin {{ user.username }}! 👑</h2>
+          <p style="color: #666; margin: 10px 0 0 0;">You have full access to system administration tools and user management.</p>
+        </div>
+        <div class="admin-stats">
+          <div class="stat-box">
+            <div class="stat-number">2</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-number">1</div>
+            <div class="stat-label">Admin Users</div>
+          </div>
+        </div>
+      </div>
       
-      <div class="user-info">
+      <div class="user-info" style="margin-top: 20px;">
         <p><strong>Email:</strong> {{ user.email }}</p>
         <p><strong>Role:</strong> <span class="role-badge admin">Administrator</span></p>
         <p><strong>Member Since:</strong> {{ user.created_at.strftime('%B %d, %Y') }}</p>
@@ -21,29 +41,58 @@
       </div>
     </div>
 
-    <div class="admin-grid">
-      <div class="dashboard-card">
-        <h3>📊 Manage Projects</h3>
-        <p>Create, edit, and organize projects for your team.</p>
-        <a href="#" class="btn-action">Manage Projects</a>
-      </div>
-
+    <!-- Management Tools -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 30px;">
       <div class="dashboard-card">
         <h3>👥 Manage Users</h3>
-        <p>View, edit, and manage user accounts and permissions.</p>
+        <p>View, edit, and manage user accounts. Change roles, activate/deactivate users, and monitor user activity.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem;">
+          <strong>Current Users:</strong>
+          <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+            <li>Mostafa (Admin)</li>
+            <li>test (User)</li>
+          </ul>
+        </div>
         <a href="#" class="btn-action">Manage Users</a>
       </div>
 
       <div class="dashboard-card">
+        <h3>📊 Manage Projects</h3>
+        <p>Create, organize, and oversee all projects. Set project goals, assign teams, and monitor progress.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem;">
+          <strong>Status:</strong> 0 projects created
+        </div>
+        <a href="#" class="btn-action">Manage Projects</a>
+      </div>
+
+      <div class="dashboard-card">
         <h3>✅ Manage Tasks</h3>
-        <p>Assign and monitor tasks across all projects.</p>
+        <p>Assign tasks, set deadlines, and track completion. Monitor task status across all projects.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem;">
+          <strong>Status:</strong> 0 tasks assigned
+        </div>
         <a href="#" class="btn-action">Manage Tasks</a>
       </div>
 
       <div class="dashboard-card">
-        <h3>📈 Reports</h3>
-        <p>View analytics and performance reports.</p>
+        <h3>📈 System Reports</h3>
+        <p>View analytics, system performance, and user engagement metrics. Export reports for analysis.</p>
+        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem;">
+          <strong>Latest:</strong> System running smoothly
+        </div>
         <a href="#" class="btn-action">View Reports</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>⚙️ System Settings</h3>
+        <p>Configure system preferences, security settings, and application features. Manage API keys and integrations.</p>
+        <a href="#" class="btn-action">System Settings</a>
+      </div>
+
+      <div class="dashboard-card">
+        <h3>🔍 Activity Log</h3>
+        <p>Monitor all user activities, login attempts, and system events for security and auditing purposes.</p>
+        <a href="#" class="btn-action">View Activity Log</a>
       </div>
     </div>
   </section>
@@ -52,7 +101,7 @@
 <style>
 .content-wrapper {
   padding: 30px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -62,7 +111,11 @@
 
 .content-header h1 {
   color: rgb(69, 80, 91);
-  font-size: 2rem;
+  font-size: 2.5rem;
+  margin: 0;
+}
+
+.content-header p {
   margin: 0;
 }
 
@@ -73,35 +126,65 @@
 
 .dashboard-card {
   background: white;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   border-left: 4px solid rgb(5, 99, 187);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .dashboard-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 35px rgba(0, 0, 0, 0.12);
+}
+
+.welcome-card {
+  border-left-color: #00c410;
+  background: linear-gradient(135deg, rgba(0,196,16,0.02), rgba(0,124,114,0.02));
 }
 
 .dashboard-card h2 {
   color: rgb(69, 80, 91);
   margin-top: 0;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
+  font-size: 1.8rem;
 }
 
 .dashboard-card h3 {
   color: rgb(5, 99, 187);
   margin-top: 0;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
+}
+
+.admin-stats {
+  display: flex;
+  gap: 15px;
+}
+
+.stat-box {
+  background: linear-gradient(135deg, #007c72, #00c410);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 120px;
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  margin-top: 5px;
 }
 
 .user-info {
   background: #f8f9fa;
   padding: 20px;
   border-radius: 8px;
-  margin: 20px 0;
 }
 
 .user-info p {
@@ -112,23 +195,12 @@
 
 .role-badge {
   display: inline-block;
-  background: linear-gradient(139deg, #007c72, #00c410);
-  color: white;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.85rem;
-}
-
-.role-badge.admin {
   background: linear-gradient(139deg, #ff6b6b, #ee5a6f);
-}
-
-.admin-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
 }
 
 .btn-action {
@@ -141,6 +213,7 @@
   font-weight: 600;
   margin-top: 15px;
   transition: all 0.3s ease;
+  font-size: 0.9rem;
 }
 
 .btn-action:hover {
@@ -157,12 +230,29 @@
   text-decoration: none;
   font-weight: 600;
   transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
 }
 
 .btn-logout:hover {
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
 }
+
+@media (max-width: 768px) {
+  .content-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .admin-stats {
+    flex-direction: column;
+  }
+  
+  .dashboard-card {
+    padding: 20px;
+  }
+}
 </style>
 {% endblock %}
+
 

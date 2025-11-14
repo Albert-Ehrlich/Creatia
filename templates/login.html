@@ -22,7 +22,12 @@
 
       <div class="form-group">
         {{ form.password.label(class_='form-label') }}
-        {{ form.password(class_='form-control', placeholder='Enter your password') }}
+        <div class="password-wrapper">
+          {{ form.password(class_='form-control', placeholder='Enter your password') }}
+          <button type="button" class="password-toggle" title="Show/Hide password">
+            <span class="eye-icon">👁</span>
+          </button>
+        </div>
       </div>
 
       {{ form.submit(class_='submit-btn') }}

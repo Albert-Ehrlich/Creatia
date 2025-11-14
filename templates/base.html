@@ -21,6 +21,31 @@
         {% block content %}
         {% endblock %}
     </main>
+
+    <script>
+        // Password visibility toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordToggles = document.querySelectorAll('.password-toggle');
+            
+            passwordToggles.forEach(toggle => {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Find the associated password input
+                    const passwordInput = this.closest('.password-wrapper').querySelector('.form-control[type="password"]');
+                    
+                    if (passwordInput) {
+                        // Toggle between password and text type
+                        if (passwordInput.type === 'password') {
+                            passwordInput.type = 'text';
+                        } else {
+                            passwordInput.type = 'password';
+                        }
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
 
