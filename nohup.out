@@ -679,3 +679,15 @@ INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:35:20] "GET /static/assets/css/style
 INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:37:42] "GET /login HTTP/1.1" 200 -
 INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:37:42] "GET /static/assets/css/style.css HTTP/1.1" 200 -
 INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:37:42] "[36mGET /static/assets/img/2-11.jpg HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:38:42] "GET /login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:38:42] "[36mGET /static/assets/css/style.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:38:42] "[36mGET /static/assets/img/2-11.jpg HTTP/1.1[0m" 304 -
+ * Debug mode: off
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:9000
+ * Running on http://192.168.214.131:9000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:38:47] "GET /login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:38:47] "[36mGET /static/assets/css/style.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:38:47] "[36mGET /static/assets/img/2-11.jpg HTTP/1.1[0m" 304 -
