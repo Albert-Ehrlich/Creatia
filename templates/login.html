@@ -1,19 +1,33 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Login</title>
-  <link href="../static/assets/css/style.css" rel="stylesheet" />
-</head>
-<body id="hero">
+{% extends 'base.html' %}
 
-  <h2>Login</h2>
-  <form method="POST" action="/login">
-    <label>Username:</label><br>
-    <input type="text" name="username"><br>
-    <label>Password:</label><br>
-    <input type="password" name="password"><br><br>
-    <input type="submit" value="Login">
-  </form>
-</body>
-</html>
+{% block title %}Login - Creatia{% endblock %}
+
+{% block content %}
+<section class="login-page">
+  <div class="login-overlay"></div>
+  <div class="login-container">
+    <h2>Login</h2>
+
+    {% if error %}
+    <div class="error-message show">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+      {{ form.csrf_token }}
+
+      <div class="form-group">
+        {{ form.username.label }}
+        {{ form.username(class_='form-control', placeholder='Enter your username') }}
+      </div>
+
+      <div class="form-group">
+        {{ form.password.label }}
+        {{ form.password(class_='form-control', placeholder='Enter your password') }}
+      </div>
+
+      {{ form.submit(class_='submit-btn') }}
+    </form>
+  </div>
+</section>
+{% endblock %}
 
