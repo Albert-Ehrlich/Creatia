@@ -1306,54 +1306,47 @@ section {
   color: #999;
 }
 
-/* Password Visibility Toggle */
-.password-wrapper {
-  position: relative;
+/* Password Visibility Checkbox */
+.checkbox-wrapper {
   display: flex;
   align-items: center;
+  margin-top: 10px;
+  gap: 8px;
 }
 
-.password-wrapper .form-control {
-  padding-right: 45px;
-  width: 100%;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 14px;
-  background: none;
-  border: none;
+.password-checkbox {
+  width: 18px;
+  height: 18px;
   cursor: pointer;
-  font-size: 1.2rem;
-  color: white;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 5px;
+  accent-color: rgb(5, 99, 187);
+  border-radius: 4px;
   transition: all 0.2s ease;
 }
 
-.password-toggle:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+.password-checkbox:hover {
+  transform: scale(1.1);
 }
 
-.password-toggle:focus {
+.password-checkbox:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 0 3px rgba(5, 99, 187, 0.2);
 }
 
-.password-toggle:active {
-  transform: scale(0.95);
+.checkbox-label {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: rgb(45, 55, 75);
+  font-weight: 500;
+  user-select: none;
+  transition: color 0.2s ease;
 }
 
-.eye-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.checkbox-label:hover {
+  color: rgb(5, 99, 187);
+}
+
+.password-checkbox:checked + .checkbox-label {
+  color: rgb(5, 99, 187);
 }
 
 /* Submit Button */

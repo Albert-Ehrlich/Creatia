@@ -23,27 +23,23 @@
     </main>
 
     <script>
-        // Password visibility toggle
+        // Password visibility checkbox
         document.addEventListener('DOMContentLoaded', function() {
-            const passwordToggles = document.querySelectorAll('.password-toggle');
+            const passwordCheckboxes = document.querySelectorAll('.password-checkbox');
             
-            passwordToggles.forEach(toggle => {
-                toggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
+            passwordCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
                     // Find the associated password input
-                    const passwordWrapper = this.closest('.password-wrapper');
-                    const passwordInput = passwordWrapper.querySelector('input[type="password"], input[type="text"]');
-                    const eyeIcon = this.querySelector('.eye-icon');
+                    const passwordWrapper = this.closest('.checkbox-wrapper');
+                    const formGroup = passwordWrapper.closest('.form-group');
+                    const passwordInput = formGroup.querySelector('input[type="password"], input[type="text"]');
                     
                     if (passwordInput) {
-                        // Toggle between password and text type
-                        if (passwordInput.type === 'password') {
+                        // Toggle between password and text type based on checkbox
+                        if (this.checked) {
                             passwordInput.type = 'text';
-                            eyeIcon.textContent = '🙈'; // Closed eye
                         } else {
                             passwordInput.type = 'password';
-                            eyeIcon.textContent = '👁'; // Open eye
                         }
                     }
                 });

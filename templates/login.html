@@ -22,11 +22,10 @@
 
       <div class="form-group">
         {{ form.password.label(class_='form-label') }}
-        <div class="password-wrapper">
-          {{ form.password(class_='form-control', placeholder='Enter your password') }}
-          <button type="button" class="password-toggle" title="Show/Hide password">
-            <span class="eye-icon">👁</span>
-          </button>
+        {{ form.password(class_='form-control', placeholder='Enter your password') }}
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="showPasswordLogin" class="password-checkbox">
+          <label for="showPasswordLogin" class="checkbox-label">Show password</label>
         </div>
       </div>
 

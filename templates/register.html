@@ -33,11 +33,10 @@
 
       <div class="form-group">
         {{ form.password.label(class_='form-label') }}
-        <div class="password-wrapper">
-          {{ form.password(class_='form-control', placeholder='Create a password') }}
-          <button type="button" class="password-toggle" title="Show/Hide password">
-            <span class="eye-icon">👁</span>
-          </button>
+        {{ form.password(class_='form-control', placeholder='Create a password') }}
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="showPasswordReg" class="password-checkbox">
+          <label for="showPasswordReg" class="checkbox-label">Show password</label>
         </div>
         {% if form.password.errors %}
           <div class="field-error">{{ form.password.errors[0] }}</div>
@@ -46,11 +45,10 @@
 
       <div class="form-group">
         {{ form.password_confirm.label(class_='form-label') }}
-        <div class="password-wrapper">
-          {{ form.password_confirm(class_='form-control', placeholder='Confirm password') }}
-          <button type="button" class="password-toggle" title="Show/Hide password">
-            <span class="eye-icon">👁</span>
-          </button>
+        {{ form.password_confirm(class_='form-control', placeholder='Confirm password') }}
+        <div class="checkbox-wrapper">
+          <input type="checkbox" id="showPasswordConfirm" class="password-checkbox">
+          <label for="showPasswordConfirm" class="checkbox-label">Show password</label>
         </div>
         {% if form.password_confirm.errors %}
           <div class="field-error">{{ form.password_confirm.errors[0] }}</div>
