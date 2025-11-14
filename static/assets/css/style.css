@@ -1368,6 +1368,14 @@ section {
   display: block;
 }
 
+.field-error {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+
 @keyframes slideDown {
   from {
     opacity: 0;
