@@ -712,3 +712,13 @@ INFO:werkzeug:[33mPress CTRL+C to quit[0m
 INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:53:02] "GET /login HTTP/1.1" 200 -
 INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:53:02] "[36mGET /static/assets/css/style.css HTTP/1.1[0m" 304 -
 INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:53:02] "[36mGET /static/assets/img/2-11.jpg HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:57:51] "[32mPOST /login HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:57:51] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 13:57:51] "GET /static/assets/css/style.css HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 14:54:02] "[32mGET /login/google HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 14:54:02] "GET /login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 14:54:02] "[36mGET /static/assets/css/style.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 14:54:02] "[36mGET /static/assets/img/2-11.jpg HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 14:54:18] "[32mPOST /login HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 14:54:18] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Nov/2025 14:54:18] "[36mGET /static/assets/css/style.css HTTP/1.1[0m" 304 -
