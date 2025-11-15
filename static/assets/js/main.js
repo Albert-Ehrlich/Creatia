@@ -340,6 +340,28 @@
         "Request for Photo Editing Services";
     });
 
+    // Password visibility checkbox
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordCheckboxes = document.querySelectorAll('.password-checkbox');
+            
+            passwordCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    // Find the associated password input
+                    const passwordWrapper = this.closest('.checkbox-wrapper');
+                    const formGroup = passwordWrapper.closest('.form-group');
+                    const passwordInput = formGroup.querySelector('input[type="password"], input[type="text"]');
+                    
+                    if (passwordInput) {
+                        // Toggle between password and text type based on checkbox
+                        if (this.checked) {
+                            passwordInput.type = 'text';
+                        } else {
+                            passwordInput.type = 'password';
+                        }
+                    }
+                });
+            });
+        });
   /**
    * Animation on scroll
    */
