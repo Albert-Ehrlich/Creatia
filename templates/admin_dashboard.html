@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="content-wrapper">
+<div class="content-wrapper admin-dashboard-page">
   <section class="content-header">
-    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+    <div class="page-header">
       <div>
         <h1>Admin Dashboard</h1>
-        <p style="margin: 5px 0 0 0; color: #999; font-size: 0.9rem;">System Administration & Management</p>
+        <p class="page-subtitle">System Administration & Management</p>
       </div>
       <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
     </div>
@@ -15,13 +15,13 @@
   <section class="content">
 
     <!-- Management Tools -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 30px;">
+    <div class="info-grid admin-card-grid">
       <div class="dashboard-card">
         <h3>👥 Manage Users</h3>
         <p>View, edit, and manage user accounts. Change roles, activate/deactivate users, and monitor user activity.</p>
-        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem;">
+        <div class="muted-panel">
           <strong>Current Users:</strong>
-          <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+          <ul>
             <li>Mostafa (Admin)</li>
             <li>test (User)</li>
           </ul>
@@ -32,7 +32,7 @@
       <div class="dashboard-card">
         <h3>📊 Manage Projects</h3>
         <p>Create, organize, and oversee all projects. Set project goals, assign teams, and monitor progress.</p>
-        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem;">
+        <div class="muted-panel muted-panel--note">
           <strong>Status:</strong> 0 projects created
         </div>
         <a href="#" class="btn-action">Manage Projects</a>
@@ -41,7 +41,7 @@
       <div class="dashboard-card">
         <h3>✅ Manage Tasks</h3>
         <p>Assign tasks, set deadlines, and track completion. Monitor task status across all projects.</p>
-        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 15px 0; font-size: 0.9rem;">
+        <div class="muted-panel muted-panel--note">
           <strong>Status:</strong> 0 tasks assigned
         </div>
         <a href="#" class="btn-action">Manage Tasks</a>
@@ -49,666 +49,58 @@
     </div>
 
     <!-- Persian Calendar Section -->
-    <div style="margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; background: #f8f9fa; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+    <div class="admin-calendar-section">
       <!-- Calendar -->
       <div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-          <button id="prevMonth" style="background: rgb(5, 99, 187); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600;">← Prev</button>
-          <h3 id="currentMonth" style="margin: 0; color: #2d374b; font-size: 1.1rem; text-align: center; min-width: 250px;"></h3>
-          <button id="nextMonth" style="background: rgb(5, 99, 187); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600;">Next →</button>
+        <div class="admin-calendar-nav">
+          <button id="prevMonth" class="calendar-nav-btn">← Prev</button>
+          <h3 id="currentMonth" class="calendar-title"></h3>
+          <button id="nextMonth" class="calendar-nav-btn">Next →</button>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #ddd; padding: 1px; border-radius: 8px; overflow: hidden;">
+        <div class="calendar-shell">
           <!-- Day names -->
-          <div style="background: rgb(5, 99, 187); color: white; padding: 12px 8px; text-align: center; font-weight: 700; font-size: 0.85rem;">ش</div>
-          <div style="background: rgb(5, 99, 187); color: white; padding: 12px 8px; text-align: center; font-weight: 700; font-size: 0.85rem;">ی</div>
-          <div style="background: rgb(5, 99, 187); color: white; padding: 12px 8px; text-align: center; font-weight: 700; font-size: 0.85rem;">د</div>
-          <div style="background: rgb(5, 99, 187); color: white; padding: 12px 8px; text-align: center; font-weight: 700; font-size: 0.85rem;">س</div>
-          <div style="background: rgb(5, 99, 187); color: white; padding: 12px 8px; text-align: center; font-weight: 700; font-size: 0.85rem;">چ</div>
-          <div style="background: rgb(5, 99, 187); color: white; padding: 12px 8px; text-align: center; font-weight: 700; font-size: 0.85rem;">پ</div>
-          <div style="background: rgb(5, 99, 187); color: white; padding: 12px 8px; text-align: center; font-weight: 700; font-size: 0.85rem;">ج</div>
+          <div class="calendar-weekday">ش</div>
+          <div class="calendar-weekday">ی</div>
+          <div class="calendar-weekday">د</div>
+          <div class="calendar-weekday">س</div>
+          <div class="calendar-weekday">چ</div>
+          <div class="calendar-weekday">پ</div>
+          <div class="calendar-weekday">ج</div>
           
           <!-- Calendar days -->
-          <div id="calendarGrid" style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;"></div>
+          <div id="calendarGrid" class="calendar-grid-dense"></div>
         </div>
 
-        <div style="margin-top: 15px; padding: 12px; background: white; border-radius: 6px; text-align: center;">
-          <p id="selectedDateDisplay" style="color: #2d374b; margin: 0; font-weight: 600;"></p>
+        <div class="selected-date-box">
+          <p id="selectedDateDisplay" class="selected-date-display"></p>
         </div>
       </div>
 
       <!-- Task Assignment -->
       <div>
-        <h3 style="margin-top: 0; color: #2d374b;">📋 Assign Tasks for Admin</h3>
+        <h3 class="section-heading-neutral">📋 Assign Tasks for Admin</h3>
         
-        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-          <label style="display: block; margin-bottom: 10px; color: #2d374b; font-weight: 600;">Task Description:</label>
-          <input type="text" id="taskInput" placeholder="Enter task description..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; box-sizing: border-box; margin-bottom: 15px;">
+        <div class="task-panel">
+          <label for="taskInput" class="form-field-label">Task Description:</label>
+          <input type="text" id="taskInput" placeholder="Enter task description..." class="form-field">
           
-          <label style="display: block; margin-bottom: 10px; color: #2d374b; font-weight: 600;">Assign to User:</label>
-          <select id="userSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem; box-sizing: border-box; margin-bottom: 15px;">
+          <label for="userSelect" class="form-field-label">Assign to User:</label>
+          <select id="userSelect" class="form-field">
             <option value="">Select User</option>
             <option value="Mostafa">Mostafa (Admin)</option>
             <option value="test">test (User)</option>
           </select>
           
-          <button id="addTaskBtn" style="width: 100%; background: linear-gradient(139deg, #007c72, #00c410); color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease;">Add Task</button>
+          <button id="addTaskBtn" class="btn-gradient-primary btn-block">Add Task</button>
         </div>
 
-        <h4 style="color: #2d374b; margin-bottom: 15px;">📌 Assigned Tasks:</h4>
-        <div id="tasksList" style="background: white; border-radius: 8px; padding: 15px; max-height: 400px; overflow-y: auto;">
-          <p style="color: #999; text-align: center;">No tasks assigned yet.</p>
+        <h4 class="section-subheading">📌 Assigned Tasks:</h4>
+        <div id="tasksList" class="tasks-list-panel">
+          <p class="empty-state">No tasks assigned yet.</p>
         </div>
       </div>
     </div>
   </section>
 </div>
-
-<style>
-.dashboard-card {
-  background: white;
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
-}
-
-.dashboard-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.12);
-}
-
-.dashboard-card h3 {
-  margin-top: 0;
-  color: #2d374b;
-  font-size: 1.2rem;
-}
-
-.admin-stats {
-  display: flex;
-  gap: 15px;
-}
-
-.stat-box {
-  background: linear-gradient(135deg, #007c72, #00c410);
-  color: white;
-  padding: 20px;
-  border-radius: 10px;
-  text-align: center;
-  min-width: 120px;
-}
-
-.stat-number {
-  font-size: 2rem;
-  font-weight: 900;
-}
-
-.stat-label {
-  font-size: 0.85rem;
-  opacity: 0.9;
-  margin-top: 5px;
-}
-
-.user-info {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.user-info p {
-  margin: 10px 0;
-  color: rgb(45, 55, 75);
-  line-height: 1.6;
-}
-
-.role-badge {
-  display: inline-block;
-  background: linear-gradient(139deg, #ff6b6b, #ee5a6f);
-  color: white;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.btn-action {
-  display: inline-block;
-  background: linear-gradient(139deg, #007c72, #00c410);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  margin-top: 15px;
-  transition: all 0.3s ease;
-  font-size: 0.9rem;
-}
-
-.btn-action:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 124, 114, 0.3);
-}
-
-.btn-logout {
-  display: inline-block;
-  background: linear-gradient(139deg, #dc3545, #c82333);
-  color: white;
-  padding: 10px 24px;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  border: none;
-  cursor: pointer;
-}
-
-.btn-logout:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
-}
-
-/* place logout at top-right */
-.content-wrapper { position: relative; }
-.btn-logout { position: absolute; top: 18px; right: 18px; }
-
-@media (max-width: 768px) {
-  .content-header h1 {
-    font-size: 1.8rem;
-  }
-  
-  .admin-stats {
-    flex-direction: column;
-  }
-  
-  .dashboard-card {
-    padding: 20px;
-  }
-}
-
-/* Welcome Card Fade-out Animation */
-/* welcome message removed */
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.calendar-day {
-  background: white;
-  padding: 8px 6px;
-  text-align: center;
-  cursor: pointer;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  transform-origin: top;
-  transform: scaleY(0.3);
-}
-
-.calendar-day:hover {
-  background: rgba(5, 99, 187, 0.05);
-  border-color: rgb(5, 99, 187);
-}
-
-.calendar-day.other-month {
-  background: #f5f5f5;
-  color: #ccc;
-}
-
-.calendar-day.today {
-  border: 2px solid #00c410;
-  background: rgba(0, 196, 16, 0.08);
-  font-weight: 700;
-  position: relative;
-}
-
-.calendar-day.today::after {
-  content: '✓';
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  font-size: 0.8rem;
-  color: #00c410;
-}
-
-.calendar-day.selected {
-  background: rgb(5, 99, 187);
-  color: white;
-  border-color: rgb(5, 99, 187);
-}
-
-.calendar-day.has-task::before {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 6px;
-  height: 6px;
-  background: #00c410;
-  border-radius: 50%;
-}
-
-.solar-date {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: #2d374b;
-}
-
-.gregorian-date {
-  font-size: 0.75rem;
-  color: #999;
-  margin-top: 2px;
-}
-
-.task-item {
-  background: white;
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 6px;
-  border-left: 4px solid rgb(5, 99, 187);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  transition: all 0.3s ease;
-}
-
-.task-item:hover {
-  background: rgba(5, 99, 187, 0.05);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-}
-
-.task-item.completed {
-  opacity: 0.6;
-  border-left-color: #999;
-}
-
-.task-item.completed .task-text {
-  text-decoration: line-through;
-  color: #999;
-}
-
-.task-text {
-  flex: 1;
-  color: #2d374b;
-  font-weight: 500;
-  word-break: break-word;
-  min-width: 150px;
-}
-
-.task-date {
-  color: #666;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-.task-user {
-  color: rgb(5, 99, 187);
-  font-size: 0.9rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.task-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.task-btn {
-  background: none;
-  border: 1px solid #ddd;
-  padding: 6px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.task-btn.toggle {
-  color: #00c410;
-  border-color: #00c410;
-}
-
-.task-btn.toggle:hover {
-  background: rgba(0, 196, 16, 0.1);
-}
-
-.task-btn.delete {
-  color: #dc3545;
-  border-color: #dc3545;
-}
-
-.task-btn.delete:hover {
-  background: rgba(220, 53, 69, 0.1);
-}
-</style>
-
-<script>
-class PersianCalendarAdmin {
-  constructor() {
-    this.tasks = JSON.parse(localStorage.getItem('adminTasks')) || {};
-    this.selectedDate = null;
-    this.currentDate = this.getCurrentPersianDate();
-    this.init();
-  }
-
-  init() {
-    this.renderCalendar();
-    this.setupEventListeners();
-    this.renderTasksList();
-  }
-
-
-  getCurrentPersianDate() {
-    const gregorianDate = new Date();
-    return this.gregorianToPersian(gregorianDate);
-  }
-
-  gregorianToPersian(gd) {
-    const g_d_n = gd.getDate();
-    const g_m_n = gd.getMonth() + 1;
-    const g_y_n = gd.getFullYear();
-
-    let g_day_no = 365 * g_y_n + (g_y_n + 3) / 4 - (g_y_n + 99) / 100 + (g_y_n + 399) / 400;
-    for (let i = 0; i < g_m_n - 1; i++) {
-      g_day_no += [0, 31, 28 + (g_y_n % 4 === 0 ? 1 : 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][i];
-    }
-    g_day_no += g_d_n;
-
-    let j_day_no = g_day_no - 79;
-    let j_np = Math.floor(j_day_no / 12053);
-    j_day_no %= 12053;
-
-    let j_y = 979 + 33 * j_np + 4 * Math.floor(j_day_no / 1461);
-    j_day_no %= 1461;
-
-    if (j_day_no >= 366) {
-      j_y += Math.floor((j_day_no - 1) / 365);
-      j_day_no = (j_day_no - 1) % 365;
-    }
-
-    let j_m = j_day_no < 186 ? 1 + Math.floor(j_day_no / 31) : 7 + Math.floor((j_day_no - 186) / 30);
-    let j_d = 1 + (j_day_no < 186 ? j_day_no % 31 : (j_day_no - 186) % 30);
-
-    return { day: j_d, month: j_m, year: j_y };
-  }
-
-  persianToGregorian(jy, jm, jd) {
-    const gy = jy + 1595;
-    const days = 365 * jy + ((jy / 33 | 0) * 8) + ((jy % 33 + 3) / 4 | 0) + 78 + jd + 
-      (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
-    
-    const leapAdj = ((gy / 4 | 0) - (gy / 100 | 0) + (gy / 400 | 0)) - 
-                    (((jy + 1595) / 4 | 0) - ((jy + 1595) / 100 | 0) + ((jy + 1595) / 400 | 0));
-    const gd = days % 365 + leapAdj;
-    
-    let month = 0;
-    const monthDays = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-    const dayInYear = gd < 1 ? 365 + gd : gd;
-    
-    for (let i = 0; i < 12; i++) {
-      const nextMonthStart = i === 1 ? 
-        (gy % 4 === 0 && (gy % 100 !== 0 || gy % 400 === 0) ? 29 : 28) + 31 : 
-        (i < 7 ? 31 : (i < 11 ? 30 : (gy % 4 === 0 && (gy % 100 !== 0 || gy % 400 === 0) ? 29 : 28)));
-      
-      if (monthDays[i] < dayInYear && dayInYear <= monthDays[i] + nextMonthStart) {
-        month = i + 1;
-        break;
-      }
-    }
-    
-    const day = dayInYear - monthDays[month - 1];
-    return { day: Math.max(1, day), month: month, year: gy };
-  }
-
-  getPersianMonthDays(year, month) {
-    if (month <= 6) return 31;
-    if (month <= 11) return 30;
-    return this.isLeapYear(year) ? 30 : 29;
-  }
-
-  isLeapYear(year) {
-    return (year + 2346) % 2820 % 2816 % 128 === 105;
-  }
-
-  getPersianMonthName(month) {
-    const months = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 
-                    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-    return months[month - 1];
-  }
-
-  getGregorianMonthName(month) {
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 
-                    'July', 'August', 'September', 'October', 'November', 'December'];
-    return months[month - 1];
-  }
-
-  renderCalendar() {
-    const year = this.currentDate.year;
-    const month = this.currentDate.month;
-    const monthName = this.getPersianMonthName(month);
-    
-    // Get the Gregorian month for header
-    const gregDate = this.persianToGregorian(year, month, 1);
-    const gregorianMonth = this.getGregorianMonthName(gregDate.month);
-    
-    document.getElementById('currentMonth').textContent = `${monthName} ${year} / ${gregorianMonth} ${gregDate.year}`;
-
-    const firstDay = new Date(year, month - 1, 1).getDay();
-    const daysInMonth = this.getPersianMonthDays(year, month);
-    const calendarGrid = document.getElementById('calendarGrid');
-    calendarGrid.innerHTML = '';
-
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
-    const daysInPrevMonth = this.getPersianMonthDays(prevYear, prevMonth);
-    const startDay = firstDay === 0 ? 6 : firstDay - 1;
-    
-    // Previous month days
-    for (let i = daysInPrevMonth - startDay + 1; i <= daysInPrevMonth; i++) {
-      const dayEl = document.createElement('div');
-      dayEl.className = 'calendar-day other-month';
-      dayEl.innerHTML = `<div class="solar-date">${i}</div>`;
-      calendarGrid.appendChild(dayEl);
-    }
-
-    const today = this.getCurrentPersianDate();
-    // Current month days
-    for (let i = 1; i <= daysInMonth; i++) {
-      const dayEl = document.createElement('div');
-      dayEl.className = 'calendar-day';
-      
-      const gregDate = this.persianToGregorian(year, month, i);
-      const gregMonthStr = String(gregDate.month).padStart(2, '0');
-      
-      dayEl.innerHTML = `
-        <div class="solar-date">${i}</div>
-        <div class="gregorian-date">${gregDate.day}</div>
-      `;
-      
-      const dateKey = `${year}-${month}-${i}`;
-      
-      if (year === today.year && month === today.month && i === today.day) {
-        dayEl.classList.add('today');
-        dayEl.setAttribute('title', 'Today');
-      }
-
-      if (this.tasks[dateKey]) {
-        dayEl.classList.add('has-task');
-      }
-
-      dayEl.addEventListener('click', () => this.selectDate(year, month, i, dayEl));
-      calendarGrid.appendChild(dayEl);
-    }
-
-    // Next month days
-    const remainingDays = 42 - (calendarGrid.children.length);
-    for (let i = 1; i <= remainingDays; i++) {
-      const dayEl = document.createElement('div');
-      dayEl.className = 'calendar-day other-month';
-      dayEl.innerHTML = `<div class="solar-date">${i}</div>`;
-      calendarGrid.appendChild(dayEl);
-    }
-  }
-
-  selectDate(year, month, day, element) {
-    document.querySelectorAll('.calendar-day.selected').forEach(el => el.classList.remove('selected'));
-    element.classList.add('selected');
-    this.selectedDate = { year, month, day };
-    this.updateSelectedDateDisplay();
-    // focus task input so admin can immediately add a task for selected date
-    const taskInput = document.getElementById('taskInput');
-    if (taskInput) {
-      taskInput.focus();
-      taskInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }
-
-  updateSelectedDateDisplay() {
-    const display = document.getElementById('selectedDateDisplay');
-    if (this.selectedDate) {
-      const monthName = this.getPersianMonthName(this.selectedDate.month);
-      const gregDate = this.persianToGregorian(this.selectedDate.year, this.selectedDate.month, this.selectedDate.day);
-      const gregMonthName = this.getGregorianMonthName(gregDate.month);
-      display.textContent = `Selected: ${monthName} ${this.selectedDate.day}, ${this.selectedDate.year} / ${gregMonthName} ${gregDate.day}, ${gregDate.year}`;
-    }
-  }
-
-  setupEventListeners() {
-    document.getElementById('prevMonth').addEventListener('click', () => this.previousMonth());
-    document.getElementById('nextMonth').addEventListener('click', () => this.nextMonth());
-    document.getElementById('addTaskBtn').addEventListener('click', () => this.addTask());
-    document.getElementById('taskInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.addTask();
-    });
-  }
-
-  previousMonth() {
-    if (this.currentDate.month === 1) {
-      this.currentDate.month = 12;
-      this.currentDate.year--;
-    } else {
-      this.currentDate.month--;
-    }
-    this.renderCalendar();
-  }
-
-  nextMonth() {
-    if (this.currentDate.month === 12) {
-      this.currentDate.month = 1;
-      this.currentDate.year++;
-    } else {
-      this.currentDate.month++;
-    }
-    this.renderCalendar();
-  }
-
-  addTask() {
-    if (!this.selectedDate) {
-      alert('Please select a date first');
-      return;
-    }
-
-    const taskInput = document.getElementById('taskInput');
-    const userSelect = document.getElementById('userSelect');
-    const taskText = taskInput.value.trim();
-    const assignedUser = userSelect.value;
-
-    if (!taskText || !assignedUser) {
-      alert('Please enter task and select a user');
-      return;
-    }
-
-    const dateKey = `${this.selectedDate.year}-${this.selectedDate.month}-${this.selectedDate.day}`;
-    if (!this.tasks[dateKey]) {
-      this.tasks[dateKey] = [];
-    }
-
-    this.tasks[dateKey].push({
-      id: Date.now(),
-      text: taskText,
-      assignedTo: assignedUser,
-      completed: false
-    });
-
-    localStorage.setItem('adminTasks', JSON.stringify(this.tasks));
-    taskInput.value = '';
-    userSelect.value = '';
-    this.renderCalendar();
-    this.renderTasksList();
-  }
-
-  renderTasksList() {
-    const tasksList = document.getElementById('tasksList');
-    tasksList.innerHTML = '';
-
-    let allTasks = [];
-    for (const [dateKey, tasks] of Object.entries(this.tasks)) {
-      tasks.forEach(task => {
-        allTasks.push({ ...task, dateKey });
-      });
-    }
-
-    if (allTasks.length === 0) {
-      tasksList.innerHTML = '<p style="color: #999; text-align: center;">No tasks assigned yet.</p>';
-      return;
-    }
-
-    allTasks.forEach(task => {
-      const [year, month, day] = task.dateKey.split('-');
-      const monthName = this.getPersianMonthName(parseInt(month));
-      const taskEl = document.createElement('div');
-      taskEl.className = `task-item ${task.completed ? 'completed' : ''}`;
-      taskEl.innerHTML = `
-        <span class="task-text">${task.text}</span>
-        <span class="task-date">${monthName} ${day}</span>
-        <span class="task-user">👤 ${task.assignedTo}</span>
-        <div class="task-actions">
-          <button class="task-btn toggle" onclick="calendarAdmin.toggleTask('${task.dateKey}', ${task.id})">
-            ${task.completed ? '↩' : '✓'}
-          </button>
-          <button class="task-btn delete" onclick="calendarAdmin.deleteTask('${task.dateKey}', ${task.id})">×</button>
-        </div>
-      `;
-      tasksList.appendChild(taskEl);
-    });
-  }
-
-  toggleTask(dateKey, id) {
-    const task = this.tasks[dateKey].find(t => t.id === id);
-    if (task) {
-      task.completed = !task.completed;
-      localStorage.setItem('adminTasks', JSON.stringify(this.tasks));
-      this.renderTasksList();
-    }
-  }
-
-  deleteTask(dateKey, id) {
-    this.tasks[dateKey] = this.tasks[dateKey].filter(t => t.id !== id);
-    if (this.tasks[dateKey].length === 0) {
-      delete this.tasks[dateKey];
-    }
-    localStorage.setItem('adminTasks', JSON.stringify(this.tasks));
-    this.renderCalendar();
-    this.renderTasksList();
-  }
-}
-
-// Initialize Persian Calendar for Admin
-const calendarAdmin = new PersianCalendarAdmin();
-</script>
 {% endblock %}
