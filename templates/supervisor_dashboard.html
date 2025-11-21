@@ -1,17 +1,14 @@
-{% extends "base.html" %} {% block content %}
-<div class="content-wrapper admin-dashboard-page">
+{% extends "base.html" %}
+{% block content %}
+<div class="content-wrapper user-dashboard-page">
   <section class="content-header">
     <div class="page-header">
       <div>
-        <h1>Admin Dashboard</h1>
-        <p class="page-subtitle">System Administration & Management</p>
+        <h1>Supervisor Dashboard</h1>
+        <p class="page-subtitle">View activity and tasks</p>
       </div>
       <div class="header-actions">
-        <a
-          href="{{ url_for('mails') }}"
-          class="btn-mail"
-          data-unread="{{ unread_mails or 0 }}"
-        >
+        <a href="{{ url_for('mails') }}" class="btn-mail" data-unread="{{ unread_mails or 0 }}">
           Mails <span class="btn-mail__badge" hidden>0</span>
         </a>
         <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
@@ -30,10 +27,7 @@
             </button>
             <button class="ghost-btn" data-cal-action="prev">→</button>
           </div>
-          <div
-            class="month-title persian-script"
-            data-role="persian-title"
-          ></div>
+          <div class="month-title persian-script" data-role="persian-title"></div>
         </div>
         <div class="dualcal-body" data-dualcal>
           <div class="dualcal-weekdays">
@@ -52,7 +46,9 @@
         <div class="dualcal-header">
           <div>
             <h3>Tasks</h3>
-            <!-- <p class="card-note">Assign tasks to users and track status.</p> -->
+            <p class="card-note">
+              Tasks visible to you.
+            </p>
           </div>
         </div>
         <div class="tasks-side-list" data-role="tasks-panel">
@@ -71,43 +67,8 @@
       </div>
 
       <div class="dashboard-card dual-calendar-card card-quarter">
-        <h3>👥 Manage Users</h3>
-        <p>
-          View, edit, and manage user accounts. Change roles,
-          activate/deactivate users, and monitor user activity.
-        </p>
-        <div class="muted-panel">
-          <strong>Current Users:</strong>
-          <ul>
-            <li>Mostafa (Admin)</li>
-            <li>test (User)</li>
-          </ul>
-        </div>
-        <a href="#" class="btn-action">Manage Users</a>
-      </div>
-
-      <div class="dashboard-card dual-calendar-card card-quarter">
-        <h3>📊 Manage Projects</h3>
-        <p>
-          Create, organize, and oversee all projects. Set project goals, assign
-          teams, and monitor progress.
-        </p>
-        <div class="muted-panel muted-panel--note">
-          <strong>Status:</strong> 0 projects created
-        </div>
-        <a href="#" class="btn-action">Manage Projects</a>
-      </div>
-
-      <div class="dashboard-card dual-calendar-card card-quarter">
-        <h3>✅ Manage Tasks</h3>
-        <p>
-          Assign tasks, set deadlines, and track completion. Monitor task status
-          across all projects.
-        </p>
-        <div class="muted-panel muted-panel--note">
-          <strong>Status:</strong> 0 tasks assigned
-        </div>
-        <a href="#" class="btn-action">Manage Tasks</a>
+        <h3>🔎 Overview</h3>
+        <p>Supervise tasks and timelines.</p>
       </div>
     </div>
     <div
@@ -115,11 +76,7 @@
       class="task-globals"
       data-user-id="{{ user.id }}"
       data-user-role="{{ user.role }}"
-      data-assignees="{{ assignees_json | tojson }}"
     ></div>
-    <script>
-      window.taskAssignees = {{ assignees_json | tojson | safe }};
-    </script>
   </section>
 </div>
 {% endblock %}

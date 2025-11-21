@@ -216,22 +216,24 @@
   /**
    * Initiate portfolio lightbox
    */
-  const portfolioLightbox = typeof GLightbox !== "undefined"
-    ? GLightbox({
-        selector: ".portfolio-lightbox",
-      })
-    : null;
+  const portfolioLightbox =
+    typeof GLightbox !== "undefined"
+      ? GLightbox({
+          selector: ".portfolio-lightbox",
+        })
+      : null;
 
   /**
    * Initiate portfolio details lightbox
    */
-  const portfolioDetailsLightbox = typeof GLightbox !== "undefined"
-    ? GLightbox({
-        selector: ".portfolio-details-lightbox",
-        width: "90%",
-        height: "90vh",
-      })
-    : null;
+  const portfolioDetailsLightbox =
+    typeof GLightbox !== "undefined"
+      ? GLightbox({
+          selector: ".portfolio-details-lightbox",
+          width: "90%",
+          height: "90vh",
+        })
+      : null;
 
   /**
    * Portfolio details slider
@@ -293,480 +295,1468 @@
     });
   });
 
-  const calendarUtils = {
-    gregorianToJalali(gy, gm, gd) {
-      if (gy instanceof Date) {
-        gd = gy.getDate();
-        gm = gy.getMonth() + 1;
-        gy = gy.getFullYear();
+  window.addEventListener("DOMContentLoaded", () => {
+    document.body.classList.add("page-fade-ready");
+  });
+
+  const dualCalUtils = {
+    toPersianDigits(value) {
+      return String(value).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
+    },
+    jalaliToGregorian(jy, jm, jd) {
+      const jDays = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+      const gDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+      let jyAdj = Math.floor(jy) - 979;
+      let jmAdj = Math.floor(jm) - 1;
+      let jdAdj = Math.floor(jd) - 1;
+      let jDayNo =
+        365 * jyAdj +
+        Math.floor(jyAdj / 33) * 8 +
+        Math.floor(((jyAdj % 33) + 3) / 4);
+      for (let i = 0; i < jmAdj; ++i) jDayNo += jDays[i];
+      jDayNo += jdAdj;
+
+      let gDayNo = jDayNo + 79;
+      let gy = 1600 + 400 * Math.floor(gDayNo / 146097);
+      gDayNo %= 146097;
+
+      let leap = true;
+      if (gDayNo >= 36525) {
+        gDayNo--;
+        gy += 100 * Math.floor(gDayNo / 36524);
+        gDayNo %= 36524;
+        if (gDayNo >= 365) gDayNo++;
+        else leap = false;
       }
 
-      const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-      const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+      gy += 4 * Math.floor(gDayNo / 1461);
+      gDayNo %= 1461;
+      if (gDayNo >= 366) {
+        leap = false;
+        gDayNo--;
+        gy += Math.floor(gDayNo / 365);
+        gDayNo %= 365;
+      }
 
+      let gm = 0;
+      for (; gm < 12; gm++) {
+        const days = gDays[gm] + (gm === 1 && leap ? 1 : 0);
+        if (gDayNo < days) break;
+        gDayNo -= days;
+      }
+      const gd = gDayNo + 1;
+      return { year: gy, month: gm + 1, day: gd };
+    },
+    gregorianToJalali(gy, gm, gd) {
+      const gDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
       let gDayNo =
         365 * (gy - 1600) +
         Math.floor((gy - 1600 + 3) / 4) -
         Math.floor((gy - 1600 + 99) / 100) +
         Math.floor((gy - 1600 + 399) / 400);
-
-      for (let i = 0; i < gm - 1; ++i) gDayNo += gDaysInMonth[i];
-      if (gm > 2 && ((gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0)) gDayNo++;
+      for (let i = 0; i < gm - 1; ++i) gDayNo += gDays[i];
+      if (gm > 2 && ((gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0))
+        gDayNo++;
       gDayNo += gd - 1;
-
       let jDayNo = gDayNo - 79;
       const jNp = Math.floor(jDayNo / 12053);
       jDayNo %= 12053;
-
       let jy = 979 + 33 * jNp + 4 * Math.floor(jDayNo / 1461);
       jDayNo %= 1461;
-
       if (jDayNo >= 366) {
         jy += Math.floor((jDayNo - 1) / 365);
         jDayNo = (jDayNo - 1) % 365;
       }
-
-      const jm = jDayNo < 186 ? 1 + Math.floor(jDayNo / 31) : 7 + Math.floor((jDayNo - 186) / 30);
+      const jm =
+        jDayNo < 186
+          ? 1 + Math.floor(jDayNo / 31)
+          : 7 + Math.floor((jDayNo - 186) / 30);
       const jd = 1 + (jDayNo < 186 ? jDayNo % 31 : (jDayNo - 186) % 30);
-
       return { jy, jm, jd };
     },
-    jalaliToGregorian(jy, jm, jd) {
-      let gy;
-      if (jy > 979) {
-        gy = 1600;
-        jy -= 979;
-      } else {
-        gy = 621;
-      }
-
-      const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
-      let days = 365 * jy + Math.floor(jy / 33) * 8 + Math.floor(((jy % 33) + 3) / 4);
-      for (let i = 0; i < jm - 1; ++i) days += jDaysInMonth[i];
-
-      days += jd - 1;
-
-      gy += 400 * Math.floor(days / 146097);
-      days %= 146097;
-
-      if (days > 36524) {
-        gy += 100 * Math.floor(--days / 36524);
-        days %= 36524;
-        if (days >= 365) days++;
-      }
-
-      gy += 4 * Math.floor(days / 1461);
-      days %= 1461;
-
-      if (days > 365) {
-        gy += Math.floor((days - 1) / 365);
-        days = (days - 1) % 365;
-      }
-
-      const gd = days + 1;
-      const salA = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-      let gm;
-      for (gm = 0; gm < 13; gm++) {
-        if (gd <= salA[gm]) break;
-      }
-      const day = gd - salA[gm - 1];
-      return { year: gy, month: gm, day };
+    persianMonthName(m) {
+      return [
+        "فروردین",
+        "اردیبهشت",
+        "خرداد",
+        "تیر",
+        "مرداد",
+        "شهریور",
+        "مهر",
+        "آبان",
+        "آذر",
+        "دی",
+        "بهمن",
+        "اسفند",
+      ][m - 1];
     },
-    getPersianMonthDays(year, month) {
-      const daysInMonth = [
-        31, 31, 31, 31, 31, 31,
-        30, 30, 30, 30, 30, this.isLeapYear(year) ? 30 : 29
+    gregMonthName(m) {
+      return [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ][m - 1];
+    },
+    daysInJalaliMonth(y, m) {
+      const days = [
+        31,
+        31,
+        31,
+        31,
+        31,
+        31,
+        30,
+        30,
+        30,
+        30,
+        30,
+        this.isLeapJalali(y) ? 30 : 29,
       ];
-      return daysInMonth[month - 1] || 31;
+      return days[m - 1];
     },
-    isLeapYear(year) {
-      return (year - 474) % 2820 % 128 < 29;
+    isLeapJalali(y) {
+      return ((((y - 474) % 2820) + 474 + 38) * 682) % 2816 < 682;
     },
-    getPersianMonthName(month) {
-      const months = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
-      return months[month - 1];
+    todayTehran() {
+      const parts = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Tehran",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+        .formatToParts(new Date())
+        .reduce((acc, part) => {
+          if (part.type !== "literal") acc[part.type] = Number(part.value);
+          return acc;
+        }, {});
+      return { gy: parts.year, gm: parts.month, gd: parts.day };
     },
-    getGregorianMonthName(month) {
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      return months[month - 1];
-    },
-    getCurrentPersianDate() {
-      const now = new Date();
-      return this.gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
-    }
   };
 
-  class BaseCalendar {
-    constructor(storageKey, elements) {
-      this.storageKey = storageKey;
-      this.elements = elements;
-      this.tasks = JSON.parse(localStorage.getItem(storageKey)) || {};
-      this.selectedDate = null;
-      this.currentDate = calendarUtils.getCurrentPersianDate();
-      this.init();
+  class DualCalendar {
+    constructor(root, taskMap = {}) {
+      this.root = root;
+      this.grid = root.querySelector('[data-role="grid"]');
+      this.persianTitle = root
+        .closest(".dual-calendar-card")
+        ?.querySelector('[data-role="persian-title"]');
+      this.current = null;
+      this.tasks = taskMap;
+      this.attachNav();
+      this.setToday();
     }
 
-    init() {
-      this.renderCalendar();
-      this.setupEventListeners();
-      this.renderTasksList();
+    storageKey() {
+      return "dualcal-tasks";
     }
 
-    setupEventListeners() {
-      this.elements.prevMonth?.addEventListener("click", () => this.previousMonth());
-      this.elements.nextMonth?.addEventListener("click", () => this.nextMonth());
-      this.elements.addTaskBtn?.addEventListener("click", () => this.addTask());
-      this.elements.taskInput?.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") this.addTask();
+    setTasks(map) {
+      this.tasks = map || {};
+      this.render();
+    }
+
+    attachNav() {
+      const nav = this.root
+        .closest(".dual-calendar-card")
+        ?.querySelectorAll("[data-cal-action]");
+      nav?.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const action = btn.dataset.calAction;
+          if (action === "prev") this.shiftMonth(-1);
+          if (action === "next") this.shiftMonth(1);
+          if (action === "today") this.setToday();
+        });
       });
     }
 
-    getYearMonth() {
-      return {
-        year: this.currentDate.year || this.currentDate.jy,
-        month: this.currentDate.month || this.currentDate.jm,
-      };
+    attachModal() {
+      if (this.modalClose) {
+        this.modalClose.addEventListener("click", () => this.hideModal());
+      }
     }
 
-    renderCalendar() {
-      const { year, month } = this.getYearMonth();
-      const monthName = calendarUtils.getPersianMonthName(month);
-      const gregDate = calendarUtils.jalaliToGregorian(year, month, 1);
-      const gregorianMonth = calendarUtils.getGregorianMonthName(gregDate.month);
-      this.elements.currentMonth.textContent = `${monthName} ${year} / ${gregorianMonth} ${gregDate.year}`;
+    setToday() {
+      const today = dualCalUtils.todayTehran();
+      const j = dualCalUtils.gregorianToJalali(today.gy, today.gm, today.gd);
+      this.current = { jy: j.jy, jm: j.jm };
+      this.render();
+    }
 
-      const firstDay = new Date(gregDate.year, gregDate.month - 1, gregDate.day).getDay();
-      const daysInMonth = calendarUtils.getPersianMonthDays(year, month);
-      const calendarGrid = this.elements.calendarGrid;
-      calendarGrid.innerHTML = "";
-
-      const prevMonth = month === 1 ? 12 : month - 1;
-      const prevYear = month === 1 ? year - 1 : year;
-      const daysInPrevMonth = calendarUtils.getPersianMonthDays(prevYear, prevMonth);
-      const startDay = firstDay === 0 ? 6 : firstDay - 1;
-
-      for (let i = daysInPrevMonth - startDay + 1; i <= daysInPrevMonth; i++) {
-        const dayEl = document.createElement("div");
-        dayEl.className = "calendar-day other-month";
-        dayEl.textContent = i;
-        calendarGrid.appendChild(dayEl);
+    shiftMonth(delta) {
+      let { jy, jm } = this.current;
+      jm += delta;
+      if (jm < 1) {
+        jm = 12;
+        jy -= 1;
+      } else if (jm > 12) {
+        jm = 1;
+        jy += 1;
       }
+      this.current = { jy, jm };
+      this.render();
+    }
 
-      const today = calendarUtils.gregorianToJalali(new Date());
+    render() {
+      if (!this.grid || !this.current) return;
+      const { jy, jm } = this.current;
+      const gregStart = dualCalUtils.jalaliToGregorian(jy, jm, 1);
+      const startDay = new Date(
+        gregStart.year,
+        gregStart.month - 1,
+        gregStart.day
+      ).getDay(); // 0=Sun
+      const offset = (startDay + 1) % 7; // make Saturday index 0
+      const daysInMonth = dualCalUtils.daysInJalaliMonth(jy, jm);
+      const prevMonth = jm === 1 ? 12 : jm - 1;
+      const prevYear = jm === 1 ? jy - 1 : jy;
+      const daysPrev = dualCalUtils.daysInJalaliMonth(prevYear, prevMonth);
+      const totalCells = Math.ceil((offset + daysInMonth) / 7) * 7;
+      const todayG = dualCalUtils.todayTehran();
+      const todayJ = dualCalUtils.gregorianToJalali(
+        todayG.gy,
+        todayG.gm,
+        todayG.gd
+      );
 
-      for (let i = 1; i <= daysInMonth; i++) {
-        const dayEl = document.createElement("div");
-        dayEl.className = "calendar-day";
+      this.grid.innerHTML = "";
+      if (this.persianTitle)
+        this.persianTitle.textContent = `${dualCalUtils.persianMonthName(
+          jm
+        )} ${dualCalUtils.toPersianDigits(jy)}`;
 
-        const solarDiv = document.createElement("div");
-        solarDiv.className = "solar-date";
-        solarDiv.textContent = i;
-        dayEl.appendChild(solarDiv);
-
-        const gregDateObj = calendarUtils.jalaliToGregorian(year, month, i);
-        const gregDiv = document.createElement("div");
-        gregDiv.className = "gregorian-date";
-        gregDiv.textContent = gregDateObj.day;
-        dayEl.appendChild(gregDiv);
-
-        const isToday = today.jy === year && today.jm === month && today.jd === i;
-        if (isToday) dayEl.classList.add("today");
-
-        const dateKey = `${year}-${month}-${i}`;
-        if (this.tasks[dateKey]) {
-          dayEl.classList.add("has-task");
+      for (let i = 0; i < totalCells; i++) {
+        let jyCell,
+          jmCell,
+          jdCell,
+          type = "current";
+        if (i < offset) {
+          jdCell = daysPrev - offset + i + 1;
+          jmCell = prevMonth;
+          jyCell = prevYear;
+          type = "other";
+        } else if (i < offset + daysInMonth) {
+          jdCell = i - offset + 1;
+          jmCell = jm;
+          jyCell = jy;
+        } else {
+          jdCell = i - (offset + daysInMonth) + 1;
+          jmCell = jm === 12 ? 1 : jm + 1;
+          jyCell = jm === 12 ? jy + 1 : jy;
+          type = "other";
         }
 
-        dayEl.addEventListener("click", () => this.selectDate(year, month, i, dayEl));
-        calendarGrid.appendChild(dayEl);
-      }
+        const cell = document.createElement("div");
+        cell.className = `dualcal-day${
+          type === "other" ? " dualcal-day--other" : ""
+        }`;
 
-      const totalCells = calendarGrid.children.length;
-      if (totalCells < 42) {
-        for (let i = 1; i <= 42 - totalCells; i++) {
-          const dayEl = document.createElement("div");
-          dayEl.className = "calendar-day other-month";
-          dayEl.textContent = i;
-          calendarGrid.appendChild(dayEl);
+        const persian = document.createElement("div");
+        persian.className = "dualcal-date persian-script";
+        persian.textContent = dualCalUtils.toPersianDigits(jdCell);
+
+        const key = this.makeKey(jyCell, jmCell, jdCell);
+        const dayTasks = this.tasks[key] || [];
+        if (dayTasks.length) {
+          const indicatorState = indicatorStateForTasks(dayTasks);
+          const indicator = document.createElement("div");
+          indicator.className = `dualcal-indicator dualcal-indicator--${indicatorState}`;
+          indicator.setAttribute(
+            "aria-label",
+            `${dayTasks.length} task${dayTasks.length === 1 ? "" : "s"}`
+          );
+          indicator.title = `${dayTasks.length} task${
+            dayTasks.length === 1 ? "" : "s"
+          }`;
+          cell.classList.add(
+            "dualcal-day--has",
+            `dualcal-day--${indicatorState}`
+          );
+          cell.appendChild(indicator);
         }
+
+        cell.dataset.key = key;
+        if (type === "current") {
+          const isPast =
+            jyCell < todayJ.jy ||
+            (jyCell === todayJ.jy && jmCell < todayJ.jm) ||
+            (jyCell === todayJ.jy && jmCell === todayJ.jm && jdCell < todayJ.jd);
+          const allowClick = !isPast || dayTasks.length > 0;
+          if (allowClick) {
+            cell.classList.add("clickable");
+            cell.addEventListener("click", () => {
+              if (isPast) {
+                if (dayTasks.length) openDayModal(jyCell, jmCell, jdCell, dayTasks);
+              } else {
+                if (dayTasks.length) openDayModal(jyCell, jmCell, jdCell, dayTasks);
+                else openTaskModal(jyCell, jmCell, jdCell);
+              }
+            });
+          }
+          if (jyCell === todayJ.jy && jmCell === todayJ.jm) {
+            if (jdCell === todayJ.jd) {
+              cell.classList.add("dualcal-day--today");
+              const todayTag = document.createElement("div");
+              todayTag.className = "dualcal-today-label";
+              todayTag.textContent = "امروز";
+              cell.appendChild(todayTag);
+            } else if (jdCell < todayJ.jd) {
+              cell.classList.add("dualcal-day--past");
+            }
+          }
+        }
+
+        cell.append(persian);
+        this.grid.appendChild(cell);
       }
     }
 
-    selectDate(year, month, day, element) {
-      this.elements.calendarGrid.querySelectorAll(".calendar-day.selected").forEach((el) => el.classList.remove("selected"));
-      element.classList.add("selected");
-      this.selectedDate = { year, month, day };
-      this.updateSelectedDateDisplay();
-      if (this.elements.taskInput) {
-        this.elements.taskInput.focus();
-        this.elements.taskInput.scrollIntoView({ behavior: "smooth", block: "center" });
+    makeKey(y, m, d) {
+      return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    }
+
+    refreshDay(y, m, d) {
+      this.render();
+    }
+  }
+
+  const initDualCalendars = (taskMap) => {
+    const calendars = [];
+    document
+      .querySelectorAll("[data-dualcal]")
+      .forEach((node) => calendars.push(new DualCalendar(node, taskMap)));
+    return calendars;
+  };
+
+  const taskStore = {
+    list: [],
+    map: {},
+    calendars: [],
+    isAdmin: false,
+    currentUserId: null,
+    assignees: [],
+    modal: null,
+    modalContent: null,
+    modalClose: null,
+  };
+
+  const initGlobalsFromDom = () => {
+    const el = document.getElementById("taskGlobals");
+    if (!el) return;
+    const uid = Number(el.dataset.userId);
+    if (!window.currentUserId) window.currentUserId = Number.isFinite(uid) ? uid : null;
+    if (!window.currentUserRole) window.currentUserRole = el.dataset.userRole || "";
+    if (!window.taskAssignees && el.dataset.assignees) {
+      try {
+        window.taskAssignees = JSON.parse(el.dataset.assignees);
+      } catch {
+        window.taskAssignees = [];
       }
     }
+  };
 
-    updateSelectedDateDisplay() {
-      if (!this.selectedDate || !this.elements.selectedDateDisplay) return;
-      const monthName = calendarUtils.getPersianMonthName(this.selectedDate.month);
-      const gregDate = calendarUtils.jalaliToGregorian(this.selectedDate.year, this.selectedDate.month, this.selectedDate.day);
-      const gregorianMonth = calendarUtils.getGregorianMonthName(gregDate.month);
-      this.elements.selectedDateDisplay.textContent = `Selected: ${monthName} ${this.selectedDate.day}, ${this.selectedDate.year} / ${gregorianMonth} ${gregDate.day}, ${gregDate.year}`;
+  const formatJalaliDate = (iso) => {
+    const parts = (iso || "").split("-");
+    if (parts.length !== 3) return iso || "";
+    const [gy, gm, gd] = parts.map((n) => Number(n));
+    if (!gy || !gm || !gd) return iso || "";
+    const j = dualCalUtils.gregorianToJalali(gy, gm, gd);
+    return `${dualCalUtils.toPersianDigits(j.jd)} ${dualCalUtils.persianMonthName(j.jm)} ${dualCalUtils.toPersianDigits(j.jy)}`;
+  };
+
+  const jalaliToIso = (jy, jm, jd) => {
+    const g = dualCalUtils.jalaliToGregorian(Number(jy), Number(jm), Number(jd));
+    return `${g.year}-${String(g.month).padStart(2, "0")}-${String(g.day).padStart(2, "0")}`;
+  };
+
+  const buildTaskMap = (tasks) => {
+    const byDate = {};
+    tasks.forEach((t) => {
+      const [gy, gm, gd] = (t.due_date || "").split("-").map((n) => Number(n));
+      if (!gy || !gm || !gd) return;
+      const j = dualCalUtils.gregorianToJalali(gy, gm, gd);
+      const key = `${j.jy}-${String(j.jm).padStart(2, "0")}-${String(
+        j.jd
+      ).padStart(2, "0")}`;
+      t._jalaliDisplay = `${dualCalUtils.toPersianDigits(
+        j.jd
+      )} ${dualCalUtils.persianMonthName(j.jm)} ${dualCalUtils.toPersianDigits(j.jy)}`;
+      if (!byDate[key]) byDate[key] = [];
+      byDate[key].push(t);
+    });
+    return byDate;
+  };
+
+  const relativeDueText = (iso) => {
+    if (!iso) {
+      return { text: "", status: "upcoming" };
+    }
+    const today = new Date();
+    const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const due = new Date(`${iso}T00:00:00`);
+    const diffMs = due.getTime() - todayMid.getTime();
+    const diffDays = Math.round(diffMs / 86400000);
+    if (diffDays === 0) {
+      return { text: "امروز", status: "today" };
+    }
+    if (diffDays < 0) {
+      const days = dualCalUtils.toPersianDigits(Math.abs(diffDays));
+      return { text: `${days} روز پیش`, status: "overdue" };
+    }
+    const days = dualCalUtils.toPersianDigits(diffDays);
+    return { text: `${days} روز مانده`, status: "upcoming" };
+  };
+
+  const indicatorStateForTasks = (tasks = []) => {
+    if (!tasks.length) return "active";
+    const hasOverdue = tasks.some((t) => t.overdue && (t.status || "").toLowerCase() !== "done");
+    if (hasOverdue) return "overdue";
+    const hasActive = tasks.some((t) => (t.status || "").toLowerCase() !== "done");
+    if (hasActive) return "active";
+    return "done";
+  };
+
+  const renderTaskRow = (task, opts) => {
+    const row = document.createElement("div");
+    row.className = `task-row slim${task.overdue ? " task-row--overdue" : ""}${
+      task.status === "done" ? " task-row--done" : ""
+    }`;
+
+    const title = document.createElement("span");
+    title.className = "task-row__title";
+    title.textContent = task.title;
+
+    const date = document.createElement("span");
+    date.className = "task-row__date";
+    const readableDate =
+      task._jalaliDisplay || formatJalaliDate(task.due_date) || "";
+    const relative = relativeDueText(task.due_date);
+    if (relative.status === "overdue") date.classList.add("task-row__date--overdue");
+    else if (relative.status === "today") date.classList.add("task-row__date--today");
+    else date.classList.add("task-row__date--upcoming");
+    let dateText = readableDate
+      ? `تاریخ سررسید: ${readableDate}${relative.text ? ` (${relative.text})` : ""}`
+      : "";
+    if (task.approved_at) {
+      dateText += `، تاریخ تایید: ${formatJalaliDate(task.approved_at.split("T")[0])}`;
+    }
+    date.textContent = dateText;
+
+    const metaHead = document.createElement("div");
+    metaHead.className = "task-row__head";
+    metaHead.append(title, date);
+
+    const meta = document.createElement("div");
+    meta.className = "task-row__meta";
+    meta.appendChild(metaHead);
+
+    if (opts.isAdmin && task.assigned_to?.username) {
+      const assignee = document.createElement("small");
+      assignee.className = "task-row__assignee";
+      assignee.textContent = `→ ${task.assigned_to.username}`;
+      meta.appendChild(assignee);
     }
 
-    previousMonth() {
-      if (this.currentDate.month === 1 || this.currentDate.jm === 1) {
-        this.currentDate.month = 12;
-        this.currentDate.jm = 12;
-        this.currentDate.year = (this.currentDate.year || this.currentDate.jy) - 1;
-        this.currentDate.jy = this.currentDate.year;
-      } else {
-        this.currentDate.month = (this.currentDate.month || this.currentDate.jm) - 1;
-        this.currentDate.jm = this.currentDate.month;
-      }
-      this.renderCalendar();
+    const actions = document.createElement("div");
+    actions.className = "task-row__actions";
+
+    const doneToggle = document.createElement("label");
+    doneToggle.className = "task-row__done";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    const shouldCheck =
+      task.status === "done" || (task.approval_pending && !opts.isAdmin);
+    checkbox.checked = shouldCheck;
+    checkbox.addEventListener("change", () =>
+      updateTaskStatus(task.id, checkbox.checked ? "done" : "pending")
+    );
+    const checkText = document.createElement("span");
+    const createdByAdmin = task.created_by?.role === "admin";
+    const assigneeRole = task.assigned_to?.role;
+    const assignedToCurrent = task.assigned_to?.id === taskStore.currentUserId;
+    checkText.textContent =
+      !opts.isAdmin && createdByAdmin ? "Submit" : "Done";
+    doneToggle.append(checkbox, checkText);
+    if (task.approval_pending) {
+      const waiting = document.createElement("span");
+      waiting.className = "task-row__approval";
+      waiting.textContent = "در انتظار تایید";
+      doneToggle.appendChild(waiting);
     }
 
-    nextMonth() {
-      if (this.currentDate.month === 12 || this.currentDate.jm === 12) {
-        this.currentDate.month = 1;
-        this.currentDate.jm = 1;
-        this.currentDate.year = (this.currentDate.year || this.currentDate.jy) + 1;
-        this.currentDate.jy = this.currentDate.year;
-      } else {
-        this.currentDate.month = (this.currentDate.month || this.currentDate.jm) + 1;
-        this.currentDate.jm = this.currentDate.month;
-      }
-      this.renderCalendar();
+    const commentBtn = document.createElement("button");
+    commentBtn.type = "button";
+    commentBtn.className = "submit-btn submit-btn--small";
+    commentBtn.textContent = "Comment";
+    commentBtn.addEventListener("click", () => openActionModal(task, "comment"));
+
+    const attachBtn = document.createElement("button");
+    attachBtn.type = "button";
+    attachBtn.className = "submit-btn submit-btn--small";
+    attachBtn.textContent = "+File";
+    attachBtn.addEventListener("click", () => triggerAttach(task.id));
+
+    const viewBtn = document.createElement("button");
+    viewBtn.type = "button";
+    viewBtn.className = "submit-btn submit-btn--small";
+    viewBtn.textContent = "View Task";
+    viewBtn.addEventListener("click", () => openViewModal(task));
+
+    const sameActor =
+      task.created_by?.id &&
+      task.assigned_to?.id &&
+      task.created_by.id === task.assigned_to.id;
+    const isSelf = sameActor && task.assigned_to?.id === taskStore.currentUserId;
+    const editAllowed = opts.isAdmin || isSelf;
+    const deleteAllowed = opts.isAdmin || isSelf;
+    const extAllowed =
+      !opts.isAdmin &&
+      !task.approval_pending &&
+      assignedToCurrent &&
+      createdByAdmin &&
+      (assigneeRole === "user" || assigneeRole === "supervisor");
+
+    const hideDoneForResearcher =
+      !opts.isAdmin && createdByAdmin && task.status === "done";
+    const restrictToViewOnly =
+      !opts.isAdmin && createdByAdmin && task.status === "done";
+
+    if (!hideDoneForResearcher) {
+      actions.append(doneToggle);
+    }
+    if (restrictToViewOnly) {
+      actions.append(viewBtn);
+    } else {
+      actions.append(commentBtn, attachBtn, viewBtn);
     }
 
-    saveTasks() {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.tasks));
+    if (!restrictToViewOnly && editAllowed) {
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "submit-btn submit-btn--small";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", () => openEditModal(task));
+      actions.append(editBtn);
     }
 
-    createActions(dateKey, task) {
-      const actions = document.createElement("div");
-      actions.className = "task-actions";
+    if (!restrictToViewOnly && extAllowed) {
+      const extBtn = document.createElement("button");
+      extBtn.type = "button";
+      extBtn.className = "submit-btn submit-btn--small";
+      extBtn.textContent = "Req Extension";
+      extBtn.addEventListener("click", () => openActionModal(task, "extension"));
+      actions.append(extBtn);
+    }
 
-      const toggleBtn = document.createElement("button");
-      toggleBtn.className = "task-btn toggle";
-      toggleBtn.type = "button";
-      toggleBtn.textContent = task.completed ? "↩" : "✓";
-      toggleBtn.addEventListener("click", () => this.toggleTask(dateKey, task.id));
-
+    if (!restrictToViewOnly && deleteAllowed) {
       const deleteBtn = document.createElement("button");
-      deleteBtn.className = "task-btn delete";
       deleteBtn.type = "button";
-      deleteBtn.textContent = "×";
-      deleteBtn.addEventListener("click", () => this.deleteTask(dateKey, task.id));
-
-      actions.append(toggleBtn, deleteBtn);
-      return actions;
-    }
-
-    renderTasksList() {}
-
-    toggleTask(dateKey, id) {
-      const task = this.tasks[dateKey]?.find((t) => t.id === id);
-      if (task) {
-        task.completed = !task.completed;
-        this.saveTasks();
-        this.renderTasksList();
-      }
-    }
-
-    deleteTask(dateKey, id) {
-      if (!this.tasks[dateKey]) return;
-      this.tasks[dateKey] = this.tasks[dateKey].filter((t) => t.id !== id);
-      if (this.tasks[dateKey].length === 0) delete this.tasks[dateKey];
-      this.saveTasks();
-      this.renderCalendar();
-      this.renderTasksList();
-    }
-  }
-
-  class UserDashboardCalendar extends BaseCalendar {
-    constructor(elements) {
-      super("userTasks", elements);
-    }
-
-    addTask() {
-      if (!this.selectedDate) {
-        alert("Please select a date first");
-        return;
-      }
-
-      const taskText = this.elements.taskInput.value.trim();
-      if (!taskText) return;
-
-      const dateKey = `${this.selectedDate.year}-${this.selectedDate.month}-${this.selectedDate.day}`;
-      if (!this.tasks[dateKey]) {
-        this.tasks[dateKey] = [];
-      }
-
-      this.tasks[dateKey].push({
-        id: Date.now(),
-        text: taskText,
-        completed: false,
+      deleteBtn.className = "btn-logout submit-btn--small";
+      deleteBtn.textContent = "Delete";
+      deleteBtn.title = "Delete task";
+      deleteBtn.addEventListener("click", async () => {
+        const ok = await confirmPopup("Are you sure you want to delete the task?");
+        if (ok) deleteTask(task.id);
       });
-
-      this.saveTasks();
-      this.elements.taskInput.value = "";
-      this.renderCalendar();
-      this.renderTasksList();
+      actions.append(deleteBtn);
     }
 
-    renderTasksList() {
-      const tasksList = this.elements.tasksList;
-      tasksList.innerHTML = "";
+    row.append(meta, actions);
 
-      const allTasks = [];
-      Object.entries(this.tasks).forEach(([dateKey, tasks]) => {
-        tasks.forEach((task) => allTasks.push({ ...task, dateKey }));
+    if (task.attachments && task.attachments.length) {
+      const files = document.createElement("div");
+      files.className = "task-row__attachments";
+      task.attachments.forEach((att) => {
+        const link = document.createElement("a");
+        link.href = att.url;
+        link.textContent = att.filename;
+        link.target = "_blank";
+        files.appendChild(link);
       });
-
-      if (allTasks.length === 0) {
-        const emptyState = document.createElement("p");
-        emptyState.className = "empty-state";
-        emptyState.textContent = "No tasks yet. Add one by selecting a date!";
-        tasksList.appendChild(emptyState);
-        return;
-      }
-
-      allTasks.forEach((task) => {
-        const [, month, day] = task.dateKey.split("-");
-        const monthName = calendarUtils.getPersianMonthName(parseInt(month, 10));
-        const taskEl = document.createElement("div");
-        taskEl.className = `task-item ${task.completed ? "completed" : ""}`;
-
-        const textSpan = document.createElement("span");
-        textSpan.className = "task-text";
-        textSpan.textContent = task.text;
-
-        const dateSpan = document.createElement("span");
-        dateSpan.className = "task-date";
-        dateSpan.textContent = `${monthName} ${day}`;
-
-        const actions = this.createActions(task.dateKey, task);
-        taskEl.append(textSpan, dateSpan, actions);
-        tasksList.appendChild(taskEl);
-      });
-    }
-  }
-
-  class AdminDashboardCalendar extends BaseCalendar {
-    constructor(elements) {
-      super("adminTasks", elements);
-      this.userSelect = elements.userSelect;
+      row.appendChild(files);
     }
 
-    addTask() {
-      if (!this.selectedDate) {
-        alert("Please select a date first");
-        return;
-      }
-
-      const taskText = this.elements.taskInput.value.trim();
-      const assignedUser = this.userSelect.value;
-
-      if (!taskText || !assignedUser) {
-        alert("Please enter task and select a user");
-        return;
-      }
-
-      const dateKey = `${this.selectedDate.year}-${this.selectedDate.month}-${this.selectedDate.day}`;
-      if (!this.tasks[dateKey]) {
-        this.tasks[dateKey] = [];
-      }
-
-      this.tasks[dateKey].push({
-        id: Date.now(),
-        text: taskText,
-        assignedTo: assignedUser,
-        completed: false,
-      });
-
-      this.saveTasks();
-      this.elements.taskInput.value = "";
-      this.userSelect.value = "";
-      this.renderCalendar();
-      this.renderTasksList();
-    }
-
-    renderTasksList() {
-      const tasksList = this.elements.tasksList;
-      tasksList.innerHTML = "";
-
-      const allTasks = [];
-      Object.entries(this.tasks).forEach(([dateKey, tasks]) => {
-        tasks.forEach((task) => allTasks.push({ ...task, dateKey }));
-      });
-
-      if (allTasks.length === 0) {
-        const emptyState = document.createElement("p");
-        emptyState.className = "empty-state";
-        emptyState.textContent = "No tasks assigned yet.";
-        tasksList.appendChild(emptyState);
-        return;
-      }
-
-      allTasks.forEach((task) => {
-        const [, month, day] = task.dateKey.split("-");
-        const monthName = calendarUtils.getPersianMonthName(parseInt(month, 10));
-        const taskEl = document.createElement("div");
-        taskEl.className = `task-item ${task.completed ? "completed" : ""}`;
-
-        const textSpan = document.createElement("span");
-        textSpan.className = "task-text";
-        textSpan.textContent = task.text;
-
-        const dateSpan = document.createElement("span");
-        dateSpan.className = "task-date";
-        dateSpan.textContent = `${monthName} ${day}`;
-
-        const userSpan = document.createElement("span");
-        userSpan.className = "task-user";
-        userSpan.textContent = `👤 ${task.assignedTo}`;
-
-        const actions = this.createActions(task.dateKey, task);
-        taskEl.append(textSpan, dateSpan, userSpan, actions);
-        tasksList.appendChild(taskEl);
-      });
-    }
-  }
-
-  const initUserDashboardCalendar = () => {
-    const wrapper = document.querySelector(".user-dashboard-page");
-    if (!wrapper) return;
-    const elements = {
-      calendarGrid: document.getElementById("calendarGrid"),
-      currentMonth: document.getElementById("currentMonth"),
-      prevMonth: document.getElementById("prevMonth"),
-      nextMonth: document.getElementById("nextMonth"),
-      taskInput: document.getElementById("taskInput"),
-      addTaskBtn: document.getElementById("addTaskBtn"),
-      tasksList: document.getElementById("tasksList"),
-      selectedDateDisplay: document.getElementById("selectedDateDisplay"),
-    };
-
-    if (Object.values(elements).some((el) => !el)) return;
-    new UserDashboardCalendar(elements);
+    return row;
   };
 
-  const initAdminDashboardCalendar = () => {
-    const wrapper = document.querySelector(".admin-dashboard-page");
-    if (!wrapper) return;
-    const elements = {
-      calendarGrid: document.getElementById("calendarGrid"),
-      currentMonth: document.getElementById("currentMonth"),
-      prevMonth: document.getElementById("prevMonth"),
-      nextMonth: document.getElementById("nextMonth"),
-      taskInput: document.getElementById("taskInput"),
-      addTaskBtn: document.getElementById("addTaskBtn"),
-      tasksList: document.getElementById("tasksList"),
-      selectedDateDisplay: document.getElementById("selectedDateDisplay"),
-      userSelect: document.getElementById("userSelect"),
-    };
+  const mailUiState = {
+    count: 0,
+    fetched: false,
+    folder: "inbox",
+    polls: null,
+    selected: new Set(),
+    currentMailId: null,
+    mails: [],
+  };
 
-    if (Object.values(elements).some((el) => !el)) return;
-    new AdminDashboardCalendar(elements);
+  const renderMailBadge = (count) => {
+    const btn = document.querySelector(".btn-mail");
+    const badge = document.querySelector(".btn-mail__badge");
+    if (!btn || !badge) return;
+    if (count > 0) {
+      badge.hidden = false;
+      badge.textContent = count;
+      btn.classList.add("btn-mail--attention");
+    } else {
+      badge.hidden = true;
+      badge.textContent = "";
+      btn.classList.remove("btn-mail--attention");
+    }
+  };
+
+  const showMailToast = (count) => {
+    if (!count) return;
+    const toast = document.createElement("div");
+    toast.className = "mail-toast";
+    toast.textContent = `You have ${count} new mails.`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+  };
+
+  const confirmPopup = (message) => {
+    return new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.className = "confirm-overlay";
+      const dialog = document.createElement("div");
+      dialog.className = "confirm-dialog";
+      const msg = document.createElement("p");
+      msg.textContent = message;
+      const actions = document.createElement("div");
+      actions.className = "confirm-actions";
+      const yes = document.createElement("button");
+      yes.className = "btn-logout submit-btn--small";
+      yes.textContent = "yes";
+      const cancel = document.createElement("button");
+      cancel.className = "submit-btn";
+      cancel.textContent = "cancel";
+      yes.addEventListener("click", () => {
+        document.body.removeChild(overlay);
+        resolve(true);
+      });
+      cancel.addEventListener("click", () => {
+        document.body.removeChild(overlay);
+        resolve(false);
+      });
+      actions.append(yes, cancel);
+      dialog.append(msg, actions);
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+    });
+  };
+
+  const fetchUnreadMailCount = async () => {
+    const btn = document.querySelector(".btn-mail");
+    if (!btn) return;
+    const initial = Number(btn.dataset.unread || 0);
+    mailUiState.count = initial;
+    renderMailBadge(initial);
+    try {
+      const res = await fetch("/api/mails/unread_count", { credentials: "same-origin" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const count = Number(data.count || 0);
+      const newlyArrived = Math.max(count - mailUiState.count, 0);
+      mailUiState.count = count;
+      renderMailBadge(count);
+      if (newlyArrived > 0 || (!mailUiState.fetched && count > 0)) {
+        showMailToast(count);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      mailUiState.fetched = true;
+    }
+  };
+
+  const mailApi = {
+    async list(folder = "inbox") {
+      const res = await fetch(`/api/mails?folder=${folder}`, { credentials: "same-origin" });
+      if (!res.ok) throw new Error("Mail list failed");
+      return res.json();
+    },
+    async markRead(ids) {
+      await fetch(`/api/mails/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action: "read" }),
+      });
+    },
+    async delete(ids, opts = {}) {
+      await fetch(`/api/mails/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action: opts.purge ? "purge" : "delete" }),
+      });
+    },
+    async restore(ids) {
+      await fetch(`/api/mails/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action: "restore" }),
+      });
+    },
+    async move(ids, target) {
+      await fetch(`/api/mails/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action: "move", target }),
+      });
+    },
+    async compose(payload) {
+      const res = await fetch(`/api/mails`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Compose failed");
+      return res.json();
+    },
+  };
+
+  const renderMailList = (mails) => {
+    const list = document.getElementById("mailList");
+    const detail = document.getElementById("mailDetail");
+    if (!list) return;
+    list.innerHTML = "";
+    if (!mails.length) {
+      list.innerHTML = `<div class="empty-state">No mails here.</div>`;
+      detail.hidden = true;
+      return;
+    }
+    mails.forEach((mail) => {
+      const item = document.createElement("article");
+      item.className = `mailbox__item ${
+        mail.is_read ? "mailbox__item--read" : "mailbox__item--unread"
+      }`;
+      item.dataset.mailId = mail.id;
+      item.draggable = true;
+      item.addEventListener("dragstart", (e) => {
+        const ids = mailUiState.selected.size
+          ? [...mailUiState.selected]
+          : [mail.id];
+        e.dataTransfer.setData("text/plain", ids.join(","));
+      });
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.addEventListener("change", (e) => {
+        if (e.target.checked) mailUiState.selected.add(mail.id);
+        else mailUiState.selected.delete(mail.id);
+        item.classList.toggle("mailbox__item--selected", e.target.checked);
+      });
+      item.appendChild(cb);
+      const main = document.createElement("div");
+      main.className = "mailbox__item-main";
+      const subj = document.createElement("div");
+      subj.className = "mailbox__subject";
+      subj.textContent = mail.subject;
+      const snippet = document.createElement("div");
+      snippet.className = "mailbox__snippet";
+      snippet.textContent = (mail.body || "").slice(0, 80);
+      const date = document.createElement("div");
+      date.className = "mailbox__date";
+      const jalali = formatJalaliDate((mail.created_at || "").slice(0, 10));
+      date.textContent = jalali ? `تاریخ: ${jalali}` : "";
+      main.append(subj, snippet, date);
+      item.appendChild(main);
+      const selectItem = (checked) => {
+        cb.checked = checked;
+        item.classList.toggle("mailbox__item--selected", checked);
+        if (checked) mailUiState.selected.add(mail.id);
+        else mailUiState.selected.delete(mail.id);
+      };
+
+      item.addEventListener("click", async (e) => {
+        if (e.target.tagName.toLowerCase() === "input") return;
+        selectItem(true);
+        await openMailDetail(mail);
+        // update inline styles to reflect read state
+        item.classList.remove("mailbox__item--unread");
+        item.classList.add("mailbox__item--read");
+        subj.style.fontWeight = "600";
+      });
+
+      if (mailUiState.selected.has(mail.id)) {
+        cb.checked = true;
+        item.classList.add("mailbox__item--selected");
+      }
+      list.appendChild(item);
+    });
+  };
+
+  const openMailDetail = async (mail) => {
+    const detail = document.getElementById("mailDetail");
+    const subj = document.getElementById("mailDetailSubject");
+    const meta = document.getElementById("mailDetailMeta");
+    const body = document.getElementById("mailDetailBody");
+    if (!detail || !subj || !meta || !body) return;
+    subj.textContent = mail.subject;
+    const jalaliDate = formatJalaliDate((mail.created_at || "").slice(0, 10));
+    const dateText = jalaliDate
+      ? `تاریخ ثبت: ${jalaliDate}`
+      : (mail.created_at || "").replace("T", " ").slice(0, 16);
+    meta.textContent = `${mail.sender || "System"} • ${dateText}`;
+    body.textContent = mail.body;
+    detail.hidden = false;
+    mailUiState.currentMailId = mail.id;
+    if (!mail.is_read) {
+      await mailApi.markRead([mail.id]);
+      mail.is_read = true;
+      // keep local cache in sync without forcing a re-render to preserve selections
+      mailUiState.mails = (mailUiState.mails || []).map((m) =>
+        m.id === mail.id ? { ...m, is_read: true } : m
+      );
+      fetchUnreadMailCount();
+    }
+  };
+
+  const refreshMails = async (showToast = true) => {
+    const list = document.getElementById("mailList");
+    const hadData = mailUiState.mails && mailUiState.mails.length;
+    if (list && !hadData) list.innerHTML = `<div class="empty-state">Loading…</div>`;
+    try {
+      const prevMails = mailUiState.mails || [];
+      const prevIds = prevMails.map((m) => m.id);
+      const currentIndex = mailUiState.currentMailId
+        ? prevIds.indexOf(mailUiState.currentMailId)
+        : -1;
+      const mails = await mailApi.list(mailUiState.folder);
+      mailUiState.mails = mails;
+      renderMailList(mails);
+      if (showToast) fetchUnreadMailCount();
+      if (mailUiState.currentMailId) {
+        const stillHere = mails.find((m) => m.id === mailUiState.currentMailId);
+        if (stillHere) {
+          openMailDetail(stillHere);
+        } else {
+          const nextMail =
+            mails[currentIndex] || mails[currentIndex - 1] || mails[0];
+          if (nextMail) {
+            openMailDetail(nextMail);
+          } else {
+            const detail = document.getElementById("mailDetail");
+            if (detail) detail.hidden = true;
+            mailUiState.currentMailId = null;
+          }
+        }
+      }
+    } catch (err) {
+      if (list) list.innerHTML = `<div class="empty-state">Could not load mails.</div>`;
+    }
+  };
+
+  const initMailboxPage = () => {
+    if (!document.querySelector(".mailbox-page")) return;
+    const navBtns = document.querySelectorAll(".mailbox__nav-btn");
+    const dropTargets = document.querySelectorAll("[data-folder='trash'], [data-folder='saved'], [data-folder='inbox']");
+    dropTargets.forEach((btn) => {
+      btn.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        btn.classList.add("active");
+      });
+      btn.addEventListener("dragleave", () => btn.classList.remove("active"));
+      btn.addEventListener("drop", async (e) => {
+        e.preventDefault();
+        btn.classList.remove("active");
+        const data = e.dataTransfer.getData("text/plain") || "";
+        const ids = data
+          .split(",")
+          .map((n) => Number(n))
+          .filter((n) => Number.isFinite(n));
+        if (!ids.length) return;
+        const target = btn.dataset.folder;
+        // Restrict moves based on current folder
+        const allowed = ["trash", "saved", "inbox"];
+        if (!allowed.includes(target)) return;
+        await mailApi.move(ids, target === "saved" ? "saved" : target);
+        await refreshMails(false);
+        fetchUnreadMailCount();
+      });
+    });
+    navBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        mailUiState.folder = btn.dataset.folder;
+        refreshMails();
+        highlightActiveFolder();
+      });
+    });
+    const highlightActiveFolder = () => {
+      navBtns.forEach((b) => {
+        const isActive = b.dataset.folder === mailUiState.folder;
+        b.classList.toggle("active", isActive);
+      });
+    };
+    highlightActiveFolder();
+    const refreshBtn = document.getElementById("refreshMails");
+    refreshBtn?.addEventListener("click", () => refreshMails(false));
+    const selectAllBtn = document.getElementById("toggleSelectAll");
+    selectAllBtn?.addEventListener("click", () => {
+      const checkboxes = document.querySelectorAll(".mailbox__item input[type='checkbox']");
+      const total = checkboxes.length;
+      const selectedCount = mailUiState.selected.size;
+      const shouldSelectAll = selectedCount !== total;
+      mailUiState.selected.clear();
+      checkboxes.forEach((cb) => {
+        cb.checked = shouldSelectAll;
+        const id = Number(cb.closest(".mailbox__item")?.dataset.mailId);
+        const item = cb.closest(".mailbox__item");
+        if (shouldSelectAll && id) mailUiState.selected.add(id);
+        item?.classList.toggle("mailbox__item--selected", shouldSelectAll);
+      });
+    });
+    const markRead = document.getElementById("markRead");
+    markRead?.addEventListener("click", async () => {
+      if (!mailUiState.selected.size) return;
+      await mailApi.markRead([...mailUiState.selected]);
+      await refreshMails(false);
+      fetchUnreadMailCount();
+    });
+    const delBtn = document.getElementById("deleteMails");
+    delBtn?.addEventListener("click", async () => {
+      let targets = [...mailUiState.selected];
+      if (!targets.length && mailUiState.currentMailId) {
+        targets = [mailUiState.currentMailId];
+      }
+      if (!targets.length) return;
+      if (mailUiState.folder === "trash") {
+        const confirmed = await confirmPopup("delete the selected mails permanently?");
+        if (!confirmed) return;
+        await mailApi.delete(targets, { purge: true });
+      } else {
+        await mailApi.delete(targets);
+      }
+      mailUiState.selected.clear();
+      await refreshMails(false);
+      fetchUnreadMailCount();
+    });
+    const restoreBtn = document.getElementById("restoreMails");
+    restoreBtn?.addEventListener("click", async () => {
+      if (mailUiState.folder !== "trash") return;
+      let targets = [...mailUiState.selected];
+      if (!targets.length && mailUiState.currentMailId) {
+        targets = [mailUiState.currentMailId];
+      }
+      if (!targets.length) return;
+      await mailApi.restore(targets);
+      mailUiState.selected.clear();
+      await refreshMails(false);
+      fetchUnreadMailCount();
+    });
+    const composePanel = document.getElementById("composePanel");
+    const composeBtn = document.getElementById("composeBtn");
+    const composeCancel = document.getElementById("composeCancel");
+    const composeForm = document.getElementById("composeForm");
+    composeBtn?.addEventListener("click", () => {
+      composePanel.hidden = false;
+    });
+    composeCancel?.addEventListener("click", () => {
+      if (composePanel) composePanel.hidden = true;
+    });
+    composeForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(composeForm);
+      const payload = {
+        recipient_id: Number(fd.get("recipient_id")),
+        subject: fd.get("subject"),
+        body: fd.get("body"),
+        is_draft: false,
+      };
+      try {
+        await mailApi.compose(payload);
+        composeForm.reset();
+        composePanel.hidden = true;
+        await refreshMails(false);
+      } catch {
+        alert("Could not send mail.");
+      }
+    });
+    mailUiState.polls = setInterval(() => {
+      refreshMails(false);
+      fetchUnreadMailCount();
+    }, 10000);
+    refreshMails(false);
+    fetchUnreadMailCount();
+  };
+
+  const renderTasksPanel = (container, tasks, opts) => {
+    if (!container) return;
+    container.innerHTML = "";
+    const sections = [
+      {
+        title: "Active",
+        filter: (t) => !t.overdue && t.status !== "done",
+        empty: "No active tasks.",
+      },
+      {
+        title: "Overdue",
+        filter: (t) => t.overdue && t.status !== "done",
+        empty: "No overdue tasks 🎉",
+      },
+      {
+        title: "Done",
+        filter: (t) => t.status === "done",
+        empty: "No completed tasks yet.",
+      },
+    ];
+
+    sections.forEach((section) => {
+      const wrap = document.createElement("div");
+      wrap.className = "tasks-section";
+      const heading = document.createElement("h4");
+      heading.textContent = section.title;
+      wrap.appendChild(heading);
+
+      const body = document.createElement("div");
+      body.className = "tasks-section__body";
+      const subset = tasks.filter(section.filter);
+      if (!subset.length) {
+        const p = document.createElement("p");
+        p.className = "empty-state";
+        p.textContent = section.empty;
+        body.appendChild(p);
+      } else {
+        subset.forEach((task) => body.appendChild(renderTaskRow(task, opts)));
+      }
+      wrap.appendChild(body);
+      container.appendChild(wrap);
+    });
+  };
+
+  const fetchTasks = async (isAdmin) => {
+    const res = await fetch(`/api/tasks${isAdmin ? "?all=1" : ""}`, {
+      credentials: "same-origin",
+      cache: "no-cache",
+    });
+    if (res.status === 401) {
+      window.location.href = "/login";
+      return [];
+    }
+    if (!res.ok) throw new Error("Failed to load tasks");
+    return await res.json();
+  };
+
+  const updateTaskStatus = async (taskId, status) => {
+    await fetch(`/api/tasks/${taskId}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    await reloadTasks();
+  };
+
+  const deleteTask = async (taskId) => {
+    const res = await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    if (res.ok) {
+      await reloadTasks();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Could not delete task.");
+    }
+  };
+
+  const triggerAttach = (taskId) => {
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.style.display = "none";
+    document.body.appendChild(fileInput);
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(`/api/tasks/${taskId}/attach`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Attachment failed.");
+      }
+      await reloadTasks();
+      document.body.removeChild(fileInput);
+    });
+    fileInput.click();
+  };
+
+  const ensureCalendars = (map) => {
+    if (!taskStore.calendars.length) {
+      taskStore.calendars = initDualCalendars(map);
+    } else {
+      taskStore.calendars.forEach((cal) => cal.setTasks(map));
+    }
+  };
+
+  const reloadTasks = async () => {
+    const panel = document.querySelector('[data-role="tasks-panel"]');
+    try {
+      const tasks = await fetchTasks(taskStore.isAdmin);
+      taskStore.list = tasks;
+      taskStore.map = buildTaskMap(tasks);
+      renderTasksPanel(panel, tasks, { isAdmin: taskStore.isAdmin });
+      ensureCalendars(taskStore.map);
+    } catch (err) {
+      if (panel) {
+        panel.innerHTML = `<p class="empty-state">Could not load tasks.</p>`;
+      }
+      ensureCalendars(taskStore.map);
+      console.error(err);
+    }
+  };
+
+  const initTaskForm = () => {
+    const form = document.querySelector('[data-role="task-form"]');
+    if (!form) return;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const payload = {
+        title: formData.get("title"),
+        due_date: formData.get("due_date"),
+        assigned_to_id: Number(formData.get("assigned_to_id")),
+        description: formData.get("description") || null,
+      };
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Could not create task.");
+        return;
+      }
+      form.reset();
+      await reloadTasks();
+    });
+  };
+
+  const ensureModal = () => {
+    if (taskStore.modal) return;
+    taskStore.modal = document.getElementById("taskModal");
+    taskStore.modalContent = document.getElementById("taskModalContent");
+    taskStore.modalClose = document.getElementById("taskModalClose");
+    taskStore.modalClose?.addEventListener("click", closeTaskModal);
+    taskStore.modal?.addEventListener("click", (e) => {
+      if (e.target === taskStore.modal) closeTaskModal();
+    });
+  };
+
+  const closeTaskModal = () => {
+    if (taskStore.modal) taskStore.modal.classList.remove("open");
+  };
+
+  const openDayModal = (jy, jm, jd, tasksForDay) => {
+    ensureModal();
+    if (!taskStore.modal || !taskStore.modalContent) return;
+    taskStore.modalContent.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = "task-modal-card dashboard-card";
+
+    const list = document.createElement("div");
+    list.className = "modal-task-list modal-task-list--day";
+    if (tasksForDay && tasksForDay.length) {
+      tasksForDay.forEach((t) => {
+        const row = document.createElement("div");
+        row.className = "task-row slim task-row--mini";
+        const title = document.createElement("div");
+        title.className = "task-row__title";
+        title.textContent = t.title;
+        const meta = document.createElement("small");
+        meta.className = "task-row__date";
+        meta.textContent = `تاریخ سررسید: ${t._jalaliDisplay || formatJalaliDate(t.due_date) || ""}`;
+        const status = document.createElement("small");
+        status.className = "task-row__assignee";
+        status.textContent = t.status === "done" ? "✔ تایید شده" : t.approval_pending ? "در انتظار تایید" : "فعال";
+        row.append(title, meta, status);
+        row.addEventListener("click", () =>
+          openViewModal(t, { type: "day", jy, jm, jd, tasks: tasksForDay })
+        );
+        list.appendChild(row);
+      });
+    } else {
+      const empty = document.createElement("p");
+      empty.className = "empty-state";
+      empty.textContent = "No tasks for this day.";
+      list.appendChild(empty);
+    }
+    card.appendChild(list);
+
+    const actions = document.createElement("div");
+    actions.className = "task-modal-actions";
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "submit-btn";
+    addBtn.textContent = "Add Task";
+    addBtn.addEventListener("click", () => {
+      closeTaskModal();
+      openTaskModal(jy, jm, jd);
+    });
+    const viewAny = document.createElement("button");
+    viewAny.type = "button";
+    viewAny.className = "submit-btn";
+    viewAny.textContent = "View Task";
+    viewAny.disabled = !tasksForDay || !tasksForDay.length;
+    viewAny.addEventListener("click", () => {
+      const first = tasksForDay && tasksForDay[0];
+      if (first) openViewModal(first);
+    });
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "ghost-btn ghost-btn--inline";
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", closeTaskModal);
+    actions.append(addBtn, viewAny, closeBtn);
+    card.appendChild(actions);
+
+    taskStore.modalContent.appendChild(card);
+    taskStore.modal.classList.add("open");
+  };
+
+  const openTaskModal = (jy, jm, jd) => {
+    ensureModal();
+    if (!taskStore.modal || !taskStore.modalContent) return;
+    const g = dualCalUtils.jalaliToGregorian(jy, jm, jd);
+    const due_date = `${g.year}-${String(g.month).padStart(2, "0")}-${String(
+      g.day
+    ).padStart(2, "0")}`;
+
+    taskStore.modalContent.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = "task-modal-card dashboard-card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `${dualCalUtils.persianMonthName(
+      jm
+    )} ${dualCalUtils.toPersianDigits(jd)} - ${dualCalUtils.toPersianDigits(
+      jy
+    )}`;
+    card.appendChild(heading);
+
+    const form = document.createElement("form");
+    form.className = "task-modal-form";
+    form.innerHTML = `
+      <input type="text" name="title" placeholder="Task title" required />
+      <textarea name="description" rows="3" placeholder="Task description"></textarea>
+      ${
+        taskStore.isAdmin
+          ? `<select name="assigned_to_id" required>
+               ${taskStore.assignees
+                 .map((u) => `<option value="${u.id}">${u.username}</option>`)
+                 .join("")}
+             </select>`
+          : `<input type="hidden" name="assigned_to_id" value="${
+              taskStore.currentUserId || ""
+            }">`
+      }
+      <input type="file" name="attachment" aria-label="Attachment" />
+    `;
+
+    const actions = document.createElement("div");
+    actions.className = "task-modal-actions";
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.className = "submit-btn";
+    submit.textContent = "Save Task";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "ghost-btn ghost-btn--inline";
+    cancel.textContent = "Cancel";
+    cancel.addEventListener("click", closeTaskModal);
+    actions.append(submit, cancel);
+
+    form.appendChild(actions);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const payload = {
+        title: fd.get("title"),
+        description: fd.get("description") || null,
+        assigned_to_id: taskStore.isAdmin
+          ? Number(fd.get("assigned_to_id")) || taskStore.currentUserId
+          : taskStore.currentUserId,
+        due_date,
+      };
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Could not create task.");
+        return;
+      }
+      const created = await res.json();
+      const attachFile = fd.get("attachment");
+      if (attachFile && attachFile.size) {
+        const formData = new FormData();
+        formData.append("file", attachFile);
+        await fetch(`/api/tasks/${created.id}/attach`, { method: "POST", body: formData });
+      }
+      closeTaskModal();
+      await reloadTasks();
+    });
+
+    card.appendChild(form);
+    taskStore.modalContent.appendChild(card);
+    taskStore.modal.classList.add("open");
+  };
+
+  const openActionModal = (task, mode) => {
+    ensureModal();
+    if (!taskStore.modal || !taskStore.modalContent) return;
+    const titleText = mode === "comment" ? "Add Comment" : "Request Extension";
+    const placeholder = mode === "comment" ? "Write your comment" : "Describe your extension request";
+
+    taskStore.modalContent.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = "task-modal-card dashboard-card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `${titleText} - ${task.title}`;
+    card.appendChild(heading);
+
+    const form = document.createElement("form");
+    form.className = "task-modal-form";
+    form.innerHTML = `
+      <textarea name="details" rows="4" placeholder="${placeholder}"></textarea>
+    `;
+
+    const actions = document.createElement("div");
+    actions.className = "task-modal-actions";
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.className = "submit-btn";
+    submit.textContent = "Submit";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "submit-btn submit-btn--small";
+    cancel.textContent = "Close";
+    cancel.addEventListener("click", closeTaskModal);
+    actions.append(submit, cancel);
+
+    form.appendChild(actions);
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      closeTaskModal();
+      alert(`${titleText} submitted.`);
+    });
+
+    card.appendChild(form);
+    taskStore.modalContent.appendChild(card);
+    taskStore.modal.classList.add("open");
+  };
+
+  const openViewModal = async (task) => {
+    ensureModal();
+    if (!taskStore.modal || !taskStore.modalContent) return;
+    taskStore.modalContent.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = "task-modal-card dashboard-card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `${task.title}`;
+    card.appendChild(heading);
+
+    const body = document.createElement("div");
+    body.className = "modal-task-list";
+    const desc = document.createElement("p");
+    desc.textContent = task.description || "No description.";
+    body.appendChild(desc);
+    card.appendChild(body);
+
+    const actions = document.createElement("div");
+    actions.className = "task-modal-actions";
+    if (origin && origin.type === "day") {
+      const backBtn = document.createElement("button");
+      backBtn.type = "button";
+      backBtn.className = "ghost-btn";
+      backBtn.textContent = "Back";
+      backBtn.addEventListener("click", () => openDayModal(origin.jy, origin.jm, origin.jd, origin.tasks));
+      actions.append(backBtn);
+    }
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "submit-btn submit-btn--small";
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", closeTaskModal);
+    actions.append(closeBtn);
+    card.appendChild(actions);
+
+    taskStore.modalContent.appendChild(card);
+    taskStore.modal.classList.add("open");
+
+    if (task.view_status !== "seen") {
+      await fetch(`/api/tasks/${task.id}/seen`, { method: "POST", headers: { "Content-Type": "application/json" } });
+      await reloadTasks();
+    }
+  };
+
+  const openEditModal = (task) => {
+    ensureModal();
+    if (!taskStore.modal || !taskStore.modalContent) return;
+    taskStore.modalContent.innerHTML = "";
+    const card = document.createElement("div");
+    card.className = "task-modal-card dashboard-card";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `Edit Task - ${task.title}`;
+    card.appendChild(heading);
+
+    const form = document.createElement("form");
+    form.className = "task-modal-form";
+    form.innerHTML = `
+      <input type="text" name="title" value="${task.title}" placeholder="Task title" required />
+      <textarea name="description" rows="3" placeholder="Task description">${task.description || ""}</textarea>
+      <input type="date" name="due_date" value="${task.due_date || ""}" />
+    `;
+
+    const actions = document.createElement("div");
+    actions.className = "task-modal-actions";
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.className = "submit-btn";
+    submit.textContent = "Save";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "submit-btn submit-btn--small";
+    cancel.textContent = "Close";
+    cancel.addEventListener("click", closeTaskModal);
+    actions.append(submit, cancel);
+
+    form.appendChild(actions);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      const payload = {
+        title: fd.get("title"),
+        description: fd.get("description") || null,
+        due_date: fd.get("due_date") || null,
+      };
+      const res = await fetch(`/api/tasks/${task.id}/edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Could not edit task.");
+        return;
+      }
+      closeTaskModal();
+      await reloadTasks();
+    });
+
+    card.appendChild(form);
+    taskStore.modalContent.appendChild(card);
+    taskStore.modal.classList.add("open");
   };
 
   const initPasswordVisibility = () => {
@@ -775,7 +1765,9 @@
       checkbox.addEventListener("change", function () {
         const passwordWrapper = this.closest(".checkbox-wrapper");
         const formGroup = passwordWrapper?.closest(".form-group");
-        const passwordInput = formGroup?.querySelector('input[type="password"], input[type="text"]');
+        const passwordInput = formGroup?.querySelector(
+          'input[type="password"], input[type="text"]'
+        );
 
         if (passwordInput) {
           passwordInput.type = this.checked ? "text" : "password";
@@ -785,9 +1777,31 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
+    initGlobalsFromDom();
     initPasswordVisibility();
-    initUserDashboardCalendar();
-    initAdminDashboardCalendar();
+    fetchUnreadMailCount();
+    initMailboxPage();
+
+    const hasTaskContext = document.getElementById("taskGlobals");
+    if (!hasTaskContext) {
+      return;
+    }
+
+    taskStore.currentUserId = window.currentUserId || null;
+    if (!taskStore.currentUserId) {
+      return;
+    }
+
+    taskStore.isAdmin =
+      (window.currentUserRole || "").toLowerCase() === "admin";
+    taskStore.assignees = Array.isArray(window.taskAssignees)
+      ? window.taskAssignees
+      : [];
+    initTaskForm();
+    // Render calendars immediately (even if tasks API fails) then hydrate with tasks data
+    ensureCalendars(taskStore.map);
+    reloadTasks();
+    setInterval(reloadTasks, 10000);
   });
   /**
    * Animation on scroll

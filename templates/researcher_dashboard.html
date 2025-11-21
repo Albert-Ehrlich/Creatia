@@ -1,17 +1,13 @@
 {% extends "base.html" %} {% block content %}
-<div class="content-wrapper admin-dashboard-page">
+<div class="content-wrapper user-dashboard-page">
   <section class="content-header">
     <div class="page-header">
       <div>
-        <h1>Admin Dashboard</h1>
-        <p class="page-subtitle">System Administration & Management</p>
+        <h1>My Dashboard</h1>
+        <p class="page-subtitle">Your personal workspace and activity</p>
       </div>
       <div class="header-actions">
-        <a
-          href="{{ url_for('mails') }}"
-          class="btn-mail"
-          data-unread="{{ unread_mails or 0 }}"
-        >
+        <a href="{{ url_for('mails') }}" class="btn-mail" data-unread="{{ unread_mails or 0 }}">
           Mails <span class="btn-mail__badge" hidden>0</span>
         </a>
         <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
@@ -52,13 +48,32 @@
         <div class="dualcal-header">
           <div>
             <h3>Tasks</h3>
-            <!-- <p class="card-note">Assign tasks to users and track status.</p> -->
           </div>
         </div>
         <div class="tasks-side-list" data-role="tasks-panel">
           <p class="empty-state">Loading tasks…</p>
         </div>
       </div>
+      <div class="dashboard-card dual-calendar-card card-quarter">
+        <h3>📝 Your Tasks</h3>
+        <p>
+          View and manage your assigned tasks. Track progress and update status
+          as you work.
+        </p>
+        <div class="muted-panel muted-panel--note">No tasks assigned yet</div>
+        <a href="#" class="btn-action">View Tasks</a>
+      </div>
+
+      <div class="dashboard-card dual-calendar-card card-quarter">
+        <h3>📊 My Projects</h3>
+        <p>
+          See all projects you're involved in. Check project status, deadlines,
+          and team members.
+        </p>
+        <div class="muted-panel muted-panel--note">No projects joined yet</div>
+        <a href="#" class="btn-action">Browse Projects</a>
+      </div>
+
       <div class="dashboard-card dual-calendar-card card-quarter">
         <h3>👤 Profile Settings</h3>
         <p>
@@ -71,43 +86,32 @@
       </div>
 
       <div class="dashboard-card dual-calendar-card card-quarter">
-        <h3>👥 Manage Users</h3>
-        <p>
-          View, edit, and manage user accounts. Change roles,
-          activate/deactivate users, and monitor user activity.
-        </p>
-        <div class="muted-panel">
-          <strong>Current Users:</strong>
-          <ul>
-            <li>Mostafa (Admin)</li>
-            <li>test (User)</li>
-          </ul>
-        </div>
-        <a href="#" class="btn-action">Manage Users</a>
+        <h3>📅 Activity</h3>
+        <p>View your recent activity and engagement history on the platform.</p>
+        <div class="muted-panel muted-panel--note">Just logged in</div>
+        <a href="#" class="btn-action">View Activity</a>
       </div>
 
       <div class="dashboard-card dual-calendar-card card-quarter">
-        <h3>📊 Manage Projects</h3>
+        <h3>💬 Messages</h3>
         <p>
-          Create, organize, and oversee all projects. Set project goals, assign
-          teams, and monitor progress.
+          Communicate with your team members and managers through direct
+          messages.
         </p>
-        <div class="muted-panel muted-panel--note">
-          <strong>Status:</strong> 0 projects created
+        <div class="muted-panel muted-panel--compact">
+          <p>New Messages: <strong>0</strong></p>
         </div>
-        <a href="#" class="btn-action">Manage Projects</a>
+        <a href="#" class="btn-action">Check Messages</a>
       </div>
 
       <div class="dashboard-card dual-calendar-card card-quarter">
-        <h3>✅ Manage Tasks</h3>
+        <h3>🎯 Goals</h3>
         <p>
-          Assign tasks, set deadlines, and track completion. Monitor task status
-          across all projects.
+          Set and track personal goals to improve your productivity and
+          performance.
         </p>
-        <div class="muted-panel muted-panel--note">
-          <strong>Status:</strong> 0 tasks assigned
-        </div>
-        <a href="#" class="btn-action">Manage Tasks</a>
+        <div class="muted-panel muted-panel--note">No goals set yet</div>
+        <a href="#" class="btn-action">Set Goals</a>
       </div>
     </div>
     <div
@@ -115,11 +119,7 @@
       class="task-globals"
       data-user-id="{{ user.id }}"
       data-user-role="{{ user.role }}"
-      data-assignees="{{ assignees_json | tojson }}"
     ></div>
-    <script>
-      window.taskAssignees = {{ assignees_json | tojson | safe }};
-    </script>
   </section>
 </div>
 {% endblock %}

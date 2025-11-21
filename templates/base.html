@@ -6,7 +6,7 @@
     <title>{% block title %}Creatia{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='assets/css/style.css') }}">
 </head>
-<body>
+<body class="page-fade">
     <!-- Main Page Content -->
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -18,10 +18,15 @@
         </div>
         {% endif %}
         {% endwith %}
-        {% block content %}
-        {% endblock %}
-    </main>
+    {% block content %}
+    {% endblock %}
+    <div id="taskModal" class="dualcal-modal">
+      <div class="dualcal-modal__inner">
+        <button id="taskModalClose" class="dualcal-modal__close" aria-label="Close">×</button>
+        <div id="taskModalContent"></div>
+      </div>
+    </div>
+</main>
     <script src="{{ url_for('static', filename='assets/js/main.js') }}"></script>    
 </body>
 </html>
-
