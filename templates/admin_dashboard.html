@@ -7,6 +7,13 @@
         <p class="page-subtitle">System Administration & Management</p>
       </div>
       <div class="header-actions">
+        <a href="{{ url_for('profile') }}" class="btn-mail">Profile</a>
+        <a href="{{ url_for('chat') }}" class="btn-mail chat-link">
+          Chat <span class="btn-mail__badge" hidden>0</span>
+        </a>
+        <a href="{{ url_for('admin_users') }}" class="btn-mail">
+          Manage Users
+        </a>
         <a
           href="{{ url_for('mails') }}"
           class="btn-mail"
@@ -54,12 +61,41 @@
             <h3>Tasks</h3>
             <!-- <p class="card-note">Assign tasks to users and track status.</p> -->
           </div>
+          <div class="tasks-tabs" role="tablist">
+            <button class="tasks-tab active" data-task-tab="active">
+              Active <span class="tasks-tab__badge tasks-tab__badge--green" data-active-badge hidden>!</span>
+            </button>
+            <button class="tasks-tab" data-task-tab="overdue">
+              Overdue <span class="tasks-tab__badge" data-overdue-badge hidden>!</span>
+            </button>
+            <button class="tasks-tab" data-task-tab="done">Done</button>
+          </div>
         </div>
-        <div class="tasks-side-list" data-role="tasks-panel">
-          <p class="empty-state">Loading tasks…</p>
+        <div class="tasks-tab-panels">
+          <div
+            class="tasks-side-list tasks-tab-panel is-active"
+            data-role="tasks-panel"
+            data-task-filter="active"
+          >
+            <p class="empty-state">Loading tasks…</p>
+          </div>
+          <div
+            class="tasks-side-list tasks-tab-panel"
+            data-role="tasks-panel"
+            data-task-filter="overdue"
+          >
+            <p class="empty-state">Loading tasks…</p>
+          </div>
+          <div
+            class="tasks-side-list tasks-tab-panel"
+            data-role="tasks-panel"
+            data-task-filter="done"
+          >
+            <p class="empty-state">Loading tasks…</p>
+          </div>
         </div>
       </div>
-      <div class="dashboard-card dual-calendar-card card-quarter">
+      <!-- <div class="dashboard-card dual-calendar-card card-quarter">
         <h3>👤 Profile Settings</h3>
         <p>
           Update your profile information, password, and account preferences.
@@ -79,11 +115,10 @@
         <div class="muted-panel">
           <strong>Current Users:</strong>
           <ul>
-            <li>Mostafa (Admin)</li>
-            <li>test (User)</li>
+            <li>Manage and view users in the Manage Users page.</li>
           </ul>
         </div>
-        <a href="#" class="btn-action">Manage Users</a>
+        <a href="{{ url_for('admin_users') }}" class="btn-action">Manage Users</a>
       </div>
 
       <div class="dashboard-card dual-calendar-card card-quarter">
@@ -108,18 +143,17 @@
           <strong>Status:</strong> 0 tasks assigned
         </div>
         <a href="#" class="btn-action">Manage Tasks</a>
-      </div>
+      </div> -->
     </div>
+    {% include "project_tree.html" %}
+    {% include "user_cards.html" %}
     <div
       id="taskGlobals"
       class="task-globals"
       data-user-id="{{ user.id }}"
       data-user-role="{{ user.role }}"
-      data-assignees="{{ assignees_json | tojson }}"
+      data-assignees='{{ assignees_json|default([])|tojson|safe }}'
     ></div>
-    <script>
-      window.taskAssignees = {{ assignees_json | tojson | safe }};
-    </script>
   </section>
 </div>
 {% endblock %}

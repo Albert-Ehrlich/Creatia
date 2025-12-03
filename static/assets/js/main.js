@@ -96,8 +96,9 @@
    */
   on("click", ".mobile-nav-toggle", function (e) {
     select("body").classList.toggle("mobile-nav-active");
-    this.classList.toggle("bi-list");
-    this.classList.toggle("bi-x");
+    this.classList.toggle("is-active");
+    const expanded = this.getAttribute("aria-expanded") === "true";
+    this.setAttribute("aria-expanded", (!expanded).toString());
   });
 
   /**
@@ -111,11 +112,11 @@
         e.preventDefault();
 
         let body = select("body");
-        if (body.classList.contains("7obile-nav-active")) {
+        if (body.classList.contains("mobile-nav-active")) {
           body.classList.remove("mobile-nav-active");
           let navbarToggle = select(".mobile-nav-toggle");
-          navbarToggle.classList.toggle("bi-list");
-          navbarToggle.classList.toggle("bi-x");
+          navbarToggle?.classList.remove("is-active");
+          navbarToggle?.setAttribute("aria-expanded", "false");
         }
         scrollto(this.hash);
       }
@@ -526,6 +527,10 @@
         todayG.gm,
         todayG.gd
       );
+      const isPastDate = (jyVal, jmVal, jdVal) =>
+        jyVal < todayJ.jy ||
+        (jyVal === todayJ.jy && jmVal < todayJ.jm) ||
+        (jyVal === todayJ.jy && jmVal === todayJ.jm && jdVal < todayJ.jd);
 
       this.grid.innerHTML = "";
       if (this.persianTitle)
@@ -584,11 +589,8 @@
         }
 
         cell.dataset.key = key;
+        const isPast = isPastDate(jyCell, jmCell, jdCell);
         if (type === "current") {
-          const isPast =
-            jyCell < todayJ.jy ||
-            (jyCell === todayJ.jy && jmCell < todayJ.jm) ||
-            (jyCell === todayJ.jy && jmCell === todayJ.jm && jdCell < todayJ.jd);
           const allowClick = !isPast || dayTasks.length > 0;
           if (allowClick) {
             cell.classList.add("clickable");
@@ -607,14 +609,21 @@
               const todayTag = document.createElement("div");
               todayTag.className = "dualcal-today-label";
               todayTag.textContent = "امروز";
-              cell.appendChild(todayTag);
+              cell.append(persian, todayTag);
             } else if (jdCell < todayJ.jd) {
               cell.classList.add("dualcal-day--past");
+              cell.append(persian);
+            } else {
+              cell.append(persian);
             }
+          } else {
+            if (isPast) cell.classList.add("dualcal-day--past");
+            cell.append(persian);
           }
+        } else {
+          if (isPast) cell.classList.add("dualcal-day--past");
+          cell.append(persian);
         }
-
-        cell.append(persian);
         this.grid.appendChild(cell);
       }
     }
@@ -634,6 +643,40 @@
       .querySelectorAll("[data-dualcal]")
       .forEach((node) => calendars.push(new DualCalendar(node, taskMap)));
     return calendars;
+  };
+
+  let chatUnreadTimer = null;
+  const fetchChatUnread = async () => {
+    const badgeEls = document.querySelectorAll(".chat-link .btn-mail__badge");
+    if (!badgeEls.length) return;
+    badgeEls.forEach((el) => {
+      el.hidden = true;
+    });
+    try {
+      const res = await fetch("/api/chat/unread", { cache: "no-cache" });
+      if (res.status === 401) {
+        return;
+      }
+      if (!res.ok) return;
+      const data = await res.json();
+      const group = Number(data?.group) || 0;
+      const total =
+        group +
+        Object.values(data?.privates || {}).reduce(
+          (a, b) => a + (Number(b) || 0),
+          0
+        );
+      badgeEls.forEach((el) => {
+        if (total > 0) {
+          el.textContent = total;
+          el.hidden = false;
+        } else {
+          el.hidden = true;
+        }
+      });
+    } catch (err) {
+      badgeEls.forEach((el) => (el.hidden = true));
+    }
   };
 
   const taskStore = {
@@ -671,6 +714,15 @@
     const j = dualCalUtils.gregorianToJalali(gy, gm, gd);
     return `${dualCalUtils.toPersianDigits(j.jd)} ${dualCalUtils.persianMonthName(j.jm)} ${dualCalUtils.toPersianDigits(j.jy)}`;
   };
+
+  const formatJalaliDateTime = (iso) => {
+    if (!iso) return "";
+    const datePart = iso.split("T")[0];
+    return formatJalaliDate(datePart);
+  };
+
+  // Expose for pages that need lightweight Jalali formatting
+  window.formatJalaliDate = formatJalaliDate;
 
   const jalaliToIso = (jy, jm, jd) => {
     const g = dualCalUtils.jalaliToGregorian(Number(jy), Number(jm), Number(jd));
@@ -715,19 +767,41 @@
     return { text: `${days} روز مانده`, status: "upcoming" };
   };
 
+  const pad2 = (n) => String(n).padStart(2, "0");
+  const isoToJalaliString = (iso) => {
+    if (!iso) return "";
+    const [gy, gm, gd] = iso.split("-").map((n) => Number(n));
+    if (!gy || !gm || !gd) return "";
+    const j = dualCalUtils.gregorianToJalali(gy, gm, gd);
+    return `${j.jy}-${pad2(j.jm)}-${pad2(j.jd)}`;
+  };
+  const jalaliToIsoString = (jstr) => {
+    if (!jstr) return "";
+    const parts = jstr.split("-").map((n) => Number(n));
+    if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return "";
+    const [jy, jm, jd] = parts;
+    const g = dualCalUtils.jalaliToGregorian(jy, jm, jd);
+    if (!g || !g.year || !g.month || !g.day) return "";
+    return `${g.year}-${pad2(g.month)}-${pad2(g.day)}`;
+  };
+
   const indicatorStateForTasks = (tasks = []) => {
     if (!tasks.length) return "active";
-    const hasOverdue = tasks.some((t) => t.overdue && (t.status || "").toLowerCase() !== "done");
+    const doneLike = (s) => ["done", "done-overdue"].includes((s || "").toLowerCase());
+    const hasOverdue = tasks.some((t) => t.overdue && !doneLike(t.status));
     if (hasOverdue) return "overdue";
-    const hasActive = tasks.some((t) => (t.status || "").toLowerCase() !== "done");
+    const hasActive = tasks.some((t) => !doneLike(t.status));
     if (hasActive) return "active";
     return "done";
   };
 
   const renderTaskRow = (task, opts) => {
+    const doneStatuses = ["done", "done-overdue"];
+    const isDoneLike = doneStatuses.includes(task.status);
+    const isOverdueNow = !!task.overdue;
     const row = document.createElement("div");
-    row.className = `task-row slim${task.overdue ? " task-row--overdue" : ""}${
-      task.status === "done" ? " task-row--done" : ""
+    row.className = `task-row slim${isOverdueNow ? " task-row--overdue" : ""}${
+      isDoneLike ? " task-row--done" : ""
     }`;
 
     const title = document.createElement("span");
@@ -772,18 +846,20 @@
     doneToggle.className = "task-row__done";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    const shouldCheck =
-      task.status === "done" || (task.approval_pending && !opts.isAdmin);
+    const shouldCheck = isDoneLike || (task.approval_pending && !opts.isAdmin);
     checkbox.checked = shouldCheck;
     checkbox.addEventListener("change", () =>
-      updateTaskStatus(task.id, checkbox.checked ? "done" : "pending")
+      updateTaskStatus(
+        task.id,
+        checkbox.checked ? (isOverdueNow ? "done-overdue" : "done") : "pending"
+      )
     );
     const checkText = document.createElement("span");
     const createdByAdmin = task.created_by?.role === "admin";
     const assigneeRole = task.assigned_to?.role;
     const assignedToCurrent = task.assigned_to?.id === taskStore.currentUserId;
-    checkText.textContent =
-      !opts.isAdmin && createdByAdmin ? "Submit" : "Done";
+    const baseLabel = !opts.isAdmin && createdByAdmin ? "Submit" : "Done";
+    checkText.textContent = isOverdueNow ? `${baseLabel} overdue` : baseLabel;
     doneToggle.append(checkbox, checkText);
     if (task.approval_pending) {
       const waiting = document.createElement("span");
@@ -807,7 +883,7 @@
     const viewBtn = document.createElement("button");
     viewBtn.type = "button";
     viewBtn.className = "submit-btn submit-btn--small";
-    viewBtn.textContent = "View Task";
+    viewBtn.textContent = "Details";
     viewBtn.addEventListener("click", () => openViewModal(task));
 
     const sameActor =
@@ -819,15 +895,17 @@
     const deleteAllowed = opts.isAdmin || isSelf;
     const extAllowed =
       !opts.isAdmin &&
-      !task.approval_pending &&
-      assignedToCurrent &&
       createdByAdmin &&
-      (assigneeRole === "user" || assigneeRole === "supervisor");
+      assignedToCurrent &&
+      task.status !== "done" &&
+      !task.approval_pending;
 
     const hideDoneForResearcher =
-      !opts.isAdmin && createdByAdmin && task.status === "done";
+      !opts.isAdmin &&
+      (task.status === "done-overdue" || (createdByAdmin && task.status === "done"));
     const restrictToViewOnly =
-      !opts.isAdmin && createdByAdmin && task.status === "done";
+      !opts.isAdmin &&
+      (task.status === "done-overdue" || (createdByAdmin && task.status === "done"));
 
     if (!hideDoneForResearcher) {
       actions.append(doneToggle);
@@ -895,6 +973,7 @@
     selected: new Set(),
     currentMailId: null,
     mails: [],
+    seenMailIds: new Set(),
   };
 
   const renderMailBadge = (count) => {
@@ -912,13 +991,49 @@
     }
   };
 
-  const showMailToast = (count) => {
-    if (!count) return;
+  const ensureMailToastStack = () => {
+    let stack = document.querySelector(".mail-toast-stack");
+    if (!stack) {
+      stack = document.createElement("div");
+      stack.className = "mail-toast-stack";
+      document.body.appendChild(stack);
+    }
+    return stack;
+  };
+
+  const showMailToast = (mail) => {
+    const stack = ensureMailToastStack();
     const toast = document.createElement("div");
     toast.className = "mail-toast";
-    toast.textContent = `You have ${count} new mails.`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 5000);
+    const title = document.createElement("strong");
+    title.textContent = mail.subject || "New mail";
+    const snippet = document.createElement("p");
+    snippet.textContent = (mail.body || "").slice(0, 80);
+
+    const actions = document.createElement("div");
+    actions.className = "mail-toast__actions";
+    const viewBtn = document.createElement("button");
+    viewBtn.className = "submit-btn submit-btn--small";
+    viewBtn.textContent = "View mail";
+    viewBtn.addEventListener("click", () => {
+      window.location.href = `/mails?open=${mail.id}`;
+    });
+    const markBtn = document.createElement("button");
+    markBtn.className = "submit-btn submit-btn--small";
+    markBtn.textContent = "Mark as read";
+    markBtn.addEventListener("click", async () => {
+      await mailApi.markRead([mail.id]);
+      toast.remove();
+      fetchUnreadMailCount();
+    });
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "ghost-btn";
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", () => toast.remove());
+    actions.append(viewBtn, markBtn, closeBtn);
+
+    toast.append(title, snippet, actions);
+    stack.appendChild(toast);
   };
 
   const confirmPopup = (message) => {
@@ -1129,6 +1244,14 @@
         : -1;
       const mails = await mailApi.list(mailUiState.folder);
       mailUiState.mails = mails;
+      if (mailUiState.folder === "inbox") {
+        mails.forEach((m) => {
+          if (!mailUiState.seenMailIds.has(m.id)) {
+            mailUiState.seenMailIds.add(m.id);
+            if (!m.is_read) showMailToast(m);
+          }
+        });
+      }
       renderMailList(mails);
       if (showToast) fetchUnreadMailCount();
       if (mailUiState.currentMailId) {
@@ -1281,6 +1404,9 @@
       refreshMails(false);
       fetchUnreadMailCount();
     }, 10000);
+    const params = new URLSearchParams(window.location.search || "");
+    const openId = Number(params.get("open"));
+    if (openId) mailUiState.currentMailId = openId;
     refreshMails(false);
     fetchUnreadMailCount();
   };
@@ -1288,45 +1414,27 @@
   const renderTasksPanel = (container, tasks, opts) => {
     if (!container) return;
     container.innerHTML = "";
-    const sections = [
-      {
-        title: "Active",
-        filter: (t) => !t.overdue && t.status !== "done",
-        empty: "No active tasks.",
-      },
-      {
-        title: "Overdue",
-        filter: (t) => t.overdue && t.status !== "done",
-        empty: "No overdue tasks 🎉",
-      },
-      {
-        title: "Done",
-        filter: (t) => t.status === "done",
-        empty: "No completed tasks yet.",
-      },
-    ];
-
-    sections.forEach((section) => {
-      const wrap = document.createElement("div");
-      wrap.className = "tasks-section";
-      const heading = document.createElement("h4");
-      heading.textContent = section.title;
-      wrap.appendChild(heading);
-
-      const body = document.createElement("div");
-      body.className = "tasks-section__body";
-      const subset = tasks.filter(section.filter);
-      if (!subset.length) {
-        const p = document.createElement("p");
-        p.className = "empty-state";
-        p.textContent = section.empty;
-        body.appendChild(p);
-      } else {
-        subset.forEach((task) => body.appendChild(renderTaskRow(task, opts)));
-      }
-      wrap.appendChild(body);
-      container.appendChild(wrap);
-    });
+    const filterKey = (container.dataset.taskFilter || "active").toLowerCase();
+    const doneLike = (s) => ["done", "done-overdue"].includes((s || "").toLowerCase());
+    const filters = {
+      active: (t) => !t.overdue && !doneLike(t.status),
+      overdue: (t) => t.overdue && !doneLike(t.status),
+      done: (t) => doneLike(t.status),
+    };
+    const emptyCopy = {
+      active: "No active tasks.",
+      overdue: "No overdue tasks 🎉",
+      done: "No completed tasks yet.",
+    };
+    const subset = tasks.filter(filters[filterKey] || (() => true));
+    if (!subset.length) {
+      const p = document.createElement("p");
+      p.className = "empty-state";
+      p.textContent = emptyCopy[filterKey] || "No tasks.";
+      container.appendChild(p);
+      return;
+    }
+    subset.forEach((task) => container.appendChild(renderTaskRow(task, opts)));
   };
 
   const fetchTasks = async (isAdmin) => {
@@ -1343,11 +1451,17 @@
   };
 
   const updateTaskStatus = async (taskId, status) => {
-    await fetch(`/api/tasks/${taskId}/status`, {
+    const res = await fetch(`/api/tasks/${taskId}/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Could not update task status.");
+      await reloadTasks();
+      return;
+    }
     await reloadTasks();
   };
 
@@ -1394,19 +1508,61 @@
   };
 
   const reloadTasks = async () => {
-    const panel = document.querySelector('[data-role="tasks-panel"]');
+    const panels = document.querySelectorAll('[data-role="tasks-panel"]');
+    if (!panels.length) return;
     try {
       const tasks = await fetchTasks(taskStore.isAdmin);
       taskStore.list = tasks;
       taskStore.map = buildTaskMap(tasks);
-      renderTasksPanel(panel, tasks, { isAdmin: taskStore.isAdmin });
+      panels.forEach((panel) =>
+        renderTasksPanel(panel, tasks, { isAdmin: taskStore.isAdmin })
+      );
+      const doneLike = (s) => ["done", "done-overdue"].includes((s || "").toLowerCase());
+      const overdueCount = tasks.filter(
+        (t) => t.overdue && !doneLike(t.status)
+      ).length;
+      const activeCount = tasks.filter(
+        (t) => !t.overdue && !doneLike(t.status)
+      ).length;
+      document
+        .querySelectorAll("[data-overdue-badge]")
+        .forEach((badge) => {
+          if (overdueCount > 0) {
+            badge.textContent = overdueCount;
+            badge.hidden = false;
+          } else {
+            badge.hidden = true;
+          }
+        });
+      document.querySelectorAll("[data-active-badge]").forEach((badge) => {
+        if (activeCount > 0) {
+          badge.textContent = activeCount;
+          badge.hidden = false;
+        } else {
+          badge.hidden = true;
+        }
+      });
       ensureCalendars(taskStore.map);
     } catch (err) {
-      if (panel) {
+      panels.forEach((panel) => {
         panel.innerHTML = `<p class="empty-state">Could not load tasks.</p>`;
-      }
+      });
       ensureCalendars(taskStore.map);
       console.error(err);
+    }
+  };
+
+  const applyTaskUpdate = (updatedTask) => {
+    if (!updatedTask) return;
+    const idx = taskStore.list.findIndex((t) => t.id === updatedTask.id);
+    if (idx !== -1) {
+      taskStore.list[idx] = updatedTask;
+      taskStore.map = buildTaskMap(taskStore.list);
+      const panels = document.querySelectorAll('[data-role="tasks-panel"]');
+      panels.forEach((panel) =>
+        renderTasksPanel(panel, taskStore.list, { isAdmin: taskStore.isAdmin })
+      );
+      ensureCalendars(taskStore.map);
     }
   };
 
@@ -1416,11 +1572,14 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const formData = new FormData(form);
+      const assignedRaw = formData.get("assigned_to_id");
       const payload = {
         title: formData.get("title"),
         due_date: formData.get("due_date"),
-        assigned_to_id: Number(formData.get("assigned_to_id")),
+        assigned_to_id:
+          assignedRaw === "all_researchers" ? "all_researchers" : Number(assignedRaw),
         description: formData.get("description") || null,
+        recurrence_type: formData.get("recurrence_type") || "one_time",
       };
       const res = await fetch("/api/tasks", {
         method: "POST",
@@ -1458,6 +1617,13 @@
     taskStore.modalContent.innerHTML = "";
     const card = document.createElement("div");
     card.className = "task-modal-card dashboard-card";
+
+    const dateLabel = document.createElement("div");
+    dateLabel.className = "task-row__date";
+    dateLabel.textContent = `تاریخ: ${dualCalUtils.toPersianDigits(
+      jd
+    )} ${dualCalUtils.persianMonthName(jm)} ${dualCalUtils.toPersianDigits(jy)}`;
+    card.appendChild(dateLabel);
 
     const list = document.createElement("div");
     list.className = "modal-task-list modal-task-list--day";
@@ -1501,7 +1667,7 @@
     const viewAny = document.createElement("button");
     viewAny.type = "button";
     viewAny.className = "submit-btn";
-    viewAny.textContent = "View Task";
+    viewAny.textContent = "Details";
     viewAny.disabled = !tasksForDay || !tasksForDay.length;
     viewAny.addEventListener("click", () => {
       const first = tasksForDay && tasksForDay[0];
@@ -1532,11 +1698,9 @@
     card.className = "task-modal-card dashboard-card";
 
     const heading = document.createElement("h3");
-    heading.textContent = `${dualCalUtils.persianMonthName(
-      jm
-    )} ${dualCalUtils.toPersianDigits(jd)} - ${dualCalUtils.toPersianDigits(
-      jy
-    )}`;
+    heading.textContent = `تاریخ: ${dualCalUtils.toPersianDigits(
+      jd
+    )} ${dualCalUtils.persianMonthName(jm)} ${dualCalUtils.toPersianDigits(jy)}`;
     card.appendChild(heading);
 
     const form = document.createElement("form");
@@ -1547,6 +1711,7 @@
       ${
         taskStore.isAdmin
           ? `<select name="assigned_to_id" required>
+               <option value="all_researchers">Assign to all researchers</option>
                ${taskStore.assignees
                  .map((u) => `<option value="${u.id}">${u.username}</option>`)
                  .join("")}
@@ -1555,6 +1720,13 @@
               taskStore.currentUserId || ""
             }">`
       }
+      <select name="recurrence_type">
+        <option value="one_time">One time</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+        <option value="yearly">Yearly</option>
+      </select>
       <input type="file" name="attachment" aria-label="Attachment" />
     `;
 
@@ -1575,13 +1747,17 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
+      const assignedRaw = fd.get("assigned_to_id");
       const payload = {
         title: fd.get("title"),
         description: fd.get("description") || null,
         assigned_to_id: taskStore.isAdmin
-          ? Number(fd.get("assigned_to_id")) || taskStore.currentUserId
+          ? assignedRaw === "all_researchers"
+            ? "all_researchers"
+            : Number(assignedRaw) || taskStore.currentUserId
           : taskStore.currentUserId,
         due_date,
+        recurrence_type: fd.get("recurrence_type") || "one_time",
       };
       const res = await fetch("/api/tasks", {
         method: "POST",
@@ -1654,9 +1830,30 @@
     taskStore.modal.classList.add("open");
   };
 
-  const openViewModal = async (task) => {
+  const openViewModal = async (task, origin) => {
     ensureModal();
     if (!taskStore.modal || !taskStore.modalContent) return;
+    const assigneeId =
+      task.assigned_to?.id || task.assigned_to?.assigned_to_id || task.assigned_to_id;
+    const isAssignee =
+      assigneeId && taskStore.currentUserId && assigneeId === taskStore.currentUserId;
+    if (isAssignee && task.view_status !== "seen") {
+      try {
+        const res = await fetch(`/api/tasks/${task.id}/seen`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (res.ok) {
+          const updated = await res.json().catch(() => null);
+          if (updated) {
+            task = updated;
+            applyTaskUpdate(updated);
+          }
+        }
+      } catch (err) {
+        /* ignore notify failure; UI remains open */
+      }
+    }
     taskStore.modalContent.innerHTML = "";
     const card = document.createElement("div");
     card.className = "task-modal-card dashboard-card";
@@ -1665,12 +1862,46 @@
     heading.textContent = `${task.title}`;
     card.appendChild(heading);
 
-    const body = document.createElement("div");
-    body.className = "modal-task-list";
-    const desc = document.createElement("p");
-    desc.textContent = task.description || "No description.";
-    body.appendChild(desc);
-    card.appendChild(body);
+    const metaBlock = document.createElement("div");
+    metaBlock.className = "task-detail-list";
+    const addRow = (label, val, fallback) => {
+      const row = document.createElement("div");
+      row.className = "task-detail-row";
+      const text = `${label}: ${val || fallback || "نامشخص"}`;
+      row.textContent = text;
+      metaBlock.appendChild(row);
+    };
+    addRow("توضیحات", task.description || "ندارد");
+    addRow("تاریخ ثبت", formatJalaliDateTime(task.created_at));
+    addRow("تاریخ سررسید", task._jalaliDisplay || formatJalaliDate(task.due_date));
+    addRow("تاریخ مشاهده", formatJalaliDateTime(task.viewed_at), "هنوز دیده نشده است");
+    addRow("تاریخ ارسال برای تایید", formatJalaliDateTime(task.submitted_at), "هنوز ارسال نشده است");
+    addRow("تاریخ تایید", formatJalaliDateTime(task.approved_at), "هنوز تایید نشده است");
+    addRow("نوع تکرار", task.recurrence_type || "یکبار");
+    addRow(
+      "وضعیت",
+      task.status === "done" ? "انجام شده" : task.approval_pending ? "در انتظار تایید" : "فعال"
+    );
+    if (task.assigned_to?.username) addRow("مسئول", task.assigned_to.username);
+    if (task.created_by?.username) addRow("ایجاد کننده", task.created_by.username);
+
+    if (task.attachments && task.attachments.length) {
+      const files = document.createElement("div");
+      files.className = "task-detail-files";
+      const label = document.createElement("div");
+      label.className = "task-detail-label";
+      label.textContent = "فایل‌ها";
+      files.appendChild(label);
+      task.attachments.forEach((att) => {
+        const link = document.createElement("a");
+        link.href = att.url;
+        link.target = "_blank";
+        link.textContent = att.filename;
+        files.appendChild(link);
+      });
+      metaBlock.appendChild(files);
+    }
+    card.appendChild(metaBlock);
 
     const actions = document.createElement("div");
     actions.className = "task-modal-actions";
@@ -1692,11 +1923,6 @@
 
     taskStore.modalContent.appendChild(card);
     taskStore.modal.classList.add("open");
-
-    if (task.view_status !== "seen") {
-      await fetch(`/api/tasks/${task.id}/seen`, { method: "POST", headers: { "Content-Type": "application/json" } });
-      await reloadTasks();
-    }
   };
 
   const openEditModal = (task) => {
@@ -1710,12 +1936,14 @@
     heading.textContent = `Edit Task - ${task.title}`;
     card.appendChild(heading);
 
+    const jalaliVal = isoToJalaliString(task.due_date || "");
+
     const form = document.createElement("form");
     form.className = "task-modal-form";
     form.innerHTML = `
       <input type="text" name="title" value="${task.title}" placeholder="Task title" required />
       <textarea name="description" rows="3" placeholder="Task description">${task.description || ""}</textarea>
-      <input type="date" name="due_date" value="${task.due_date || ""}" />
+      <input type="text" name="due_date_j" value="${jalaliVal}" placeholder="YYYY-MM-DD (Jalali)" />
     `;
 
     const actions = document.createElement("div");
@@ -1735,10 +1963,19 @@
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
+      const jalaliInput = (fd.get("due_date_j") || "").trim();
+      let dueIso = null;
+      if (jalaliInput) {
+        dueIso = jalaliToIsoString(jalaliInput);
+        if (!dueIso) {
+          alert("تاریخ نامعتبر است. قالب: YYYY-MM-DD (جلالی)");
+          return;
+        }
+      }
       const payload = {
         title: fd.get("title"),
         description: fd.get("description") || null,
-        due_date: fd.get("due_date") || null,
+        due_date: dueIso,
       };
       const res = await fetch(`/api/tasks/${task.id}/edit`, {
         method: "POST",
@@ -1757,6 +1994,613 @@
     card.appendChild(form);
     taskStore.modalContent.appendChild(card);
     taskStore.modal.classList.add("open");
+  };
+
+  const projectTreeStore = {
+    nodes: [],
+    lookup: new Map(),
+    container: null,
+    adminPanel: null,
+    assignees: [],
+    canEdit: false,
+  };
+
+  const getSelectedAssigneeIds = (select) =>
+    Array.from(select?.selectedOptions || [])
+      .map((o) => o.value)
+      .filter((v) => v !== "");
+
+  const normalizeAssignees = (raw = []) =>
+    raw
+      .filter((u) => u && (u.id !== undefined || u.username))
+      .map((u) => ({
+        id: Number(u.id),
+        username: u.username || "",
+        full_name: u.full_name || "",
+        role: u.role || "",
+      }));
+
+  const treeAssigneesFromDom = () => {
+    const panel = document.querySelector("[data-project-tree-admin]");
+    const fallback = Array.isArray(window.taskAssignees) ? window.taskAssignees : [];
+    if (!panel || !panel.dataset.treeAssignees) {
+      return normalizeAssignees(fallback);
+    }
+    try {
+      return normalizeAssignees(JSON.parse(panel.dataset.treeAssignees));
+    } catch {
+      return normalizeAssignees(fallback);
+    }
+  };
+
+  const buildProjectTree = (nodes = []) => {
+    const clones = nodes.map((n) => {
+      const normalizedAssignees =
+        Array.isArray(n.assignees) && n.assignees.length
+          ? normalizeAssignees(n.assignees)
+          : n.researcher
+          ? normalizeAssignees([n.researcher])
+          : [];
+      const primaryAssigneeId =
+        normalizedAssignees[0]?.id ??
+        (n.researcher_id === null || n.researcher_id === undefined
+          ? null
+          : Number(n.researcher_id));
+      return {
+        ...n,
+        id: Number(n.id),
+        parent_id:
+          n.parent_id === null || n.parent_id === undefined
+            ? null
+            : Number(n.parent_id),
+        researcher_id: primaryAssigneeId,
+        researcher: normalizedAssignees[0] || null,
+        assignees: normalizedAssignees,
+        assignee_ids: normalizedAssignees.map((a) => a.id).filter((id) => Number.isFinite(id)),
+        children: [],
+      };
+    });
+    const byId = new Map();
+    clones.forEach((n) => byId.set(n.id, n));
+    const roots = [];
+    clones.forEach((n) => {
+      const parent = byId.get(n.parent_id);
+      if (parent) parent.children.push(n);
+      else roots.push(n);
+    });
+    return { roots, byId };
+  };
+
+  const populateResearcherSelects = () => {
+    if (!projectTreeStore.adminPanel) return;
+    const branchSelect = projectTreeStore.adminPanel.querySelector("[data-tree-researcher]");
+    const editSelect = projectTreeStore.adminPanel.querySelector("[data-tree-researcher-edit]");
+    const options = projectTreeStore.assignees || [];
+    const trunkSelect = projectTreeStore.adminPanel.querySelector("[data-tree-researcher-trunk]");
+    const fillMulti = (select, opts) => {
+      if (!select) return;
+      select.multiple = true;
+      select.size = Math.max(3, Math.min(6, (options && options.length) || 4));
+      const prev = Array.from(select.selectedOptions).map((o) => o.value);
+      select.innerHTML = opts.join("");
+      options.forEach((u) => {
+        const label = u.full_name || u.username || `User ${u.id}`;
+        const opt = new Option(label, u.id);
+        select.appendChild(opt);
+      });
+      prev.forEach((v) => {
+        const opt = Array.from(select.options).find((o) => o.value === v);
+        if (opt) opt.selected = true;
+      });
+    };
+    fillMulti(
+      branchSelect,
+      ['<option value="" disabled>اختیاری: محقق مسئول (چند انتخاب)</option>']
+    );
+    fillMulti(
+      trunkSelect,
+      ['<option value="" disabled>اختیاری: محقق مسئول (چند انتخاب)</option>']
+    );
+    fillMulti(
+      editSelect,
+      ['<option value="" disabled>انتخاب مسئولین (چند انتخاب)</option>']
+    );
+  };
+
+  const populateParentOptions = (select, opts = {}) => {
+    if (!select) return;
+    const prev = select.value;
+    const { includePlaceholder = false, includeKeep = false, includeRoot = true } = opts;
+    select.innerHTML = "";
+    if (includeKeep) {
+      const keepOpt = new Option("Keep parent", "__keep");
+      select.appendChild(keepOpt);
+    }
+    if (includePlaceholder) {
+      const placeholder = new Option("Choose parent trunk", "");
+      placeholder.disabled = false;
+      select.appendChild(placeholder);
+    }
+    if (!includeKeep && includeRoot) {
+      const rootOpt = new Option("Main trunk", "");
+      select.appendChild(rootOpt);
+    }
+    projectTreeStore.nodes.forEach((n) => {
+      const opt = new Option(n.name, n.id);
+      select.appendChild(opt);
+    });
+    select.value = prev;
+  };
+
+  const populateNodeSelect = () => {
+    if (!projectTreeStore.adminPanel) return;
+    const nodeSelect = projectTreeStore.adminPanel.querySelector("[data-tree-node]");
+    if (!nodeSelect) return;
+    const prev = nodeSelect.value;
+    nodeSelect.innerHTML = '<option value="">Select node to edit</option>';
+    projectTreeStore.nodes.forEach((n) => {
+      const label = `${n.name}${n.parent_id ? " (شاخه)" : " (پروژه اصلی)"}`;
+      const opt = new Option(label, n.id);
+      nodeSelect.appendChild(opt);
+    });
+    nodeSelect.value = prev;
+  };
+
+  const refreshTreeAdminControls = () => {
+    if (!projectTreeStore.adminPanel) return;
+    populateResearcherSelects();
+    populateParentOptions(
+      projectTreeStore.adminPanel.querySelector("[data-tree-parent]"),
+      { includePlaceholder: true, includeRoot: false }
+    );
+    populateParentOptions(
+      projectTreeStore.adminPanel.querySelector("[data-tree-parent-edit]"),
+      { includeKeep: true }
+    );
+    populateNodeSelect();
+  };
+
+  const prefillBranchForm = (parentId) => {
+    if (!projectTreeStore.adminPanel) return;
+    const form = projectTreeStore.adminPanel.querySelector('[data-tree-form="branch"]');
+    const parentSelect = projectTreeStore.adminPanel.querySelector("[data-tree-parent]");
+    if (parentSelect) {
+      parentSelect.value = parentId || "";
+    }
+    if (form) {
+      const nameInput = form.querySelector('input[name="name"]');
+      if (nameInput) nameInput.focus();
+      form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+
+  const prefillEditForm = (nodeId) => {
+    if (!projectTreeStore.adminPanel) return;
+    const node = projectTreeStore.lookup.get(Number(nodeId));
+    if (!node) return;
+    const form = projectTreeStore.adminPanel.querySelector('[data-tree-form="edit"]');
+    const nodeSelect = projectTreeStore.adminPanel.querySelector("[data-tree-node]");
+    const parentSelect = projectTreeStore.adminPanel.querySelector("[data-tree-parent-edit]");
+    const researcherSelect = projectTreeStore.adminPanel.querySelector("[data-tree-researcher-edit]");
+    const appendToggle = projectTreeStore.adminPanel.querySelector("[data-tree-append-assignees]");
+    if (nodeSelect) nodeSelect.value = String(node.id);
+    if (form) {
+      const nameInput = form.querySelector('input[name="name"]');
+      if (nameInput) nameInput.value = node.name || "";
+    }
+    if (parentSelect) {
+      parentSelect.value = node.parent_id === null || node.parent_id === undefined ? "" : String(node.parent_id);
+      parentSelect.querySelectorAll("option").forEach((opt) => {
+        opt.disabled = opt.value && Number(opt.value) === node.id;
+      });
+    }
+    if (researcherSelect) {
+      const values = (node.assignees || []).map((a) => String(a.id));
+      Array.from(researcherSelect.options).forEach((opt) => {
+        opt.selected = values.includes(opt.value);
+      });
+    }
+    if (appendToggle) appendToggle.checked = true;
+    if (form) {
+      form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  };
+
+  const focusRosterCard = (userId) => {
+    if (!userId) return;
+    const rosterSection = document.querySelector("[data-team-roster]");
+    const card = document.querySelector(`[data-user-card="${userId}"]`);
+    const target = card || rosterSection;
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    if (card) {
+      card.classList.remove("is-blinking");
+      // Force reflow so the animation can restart
+      // eslint-disable-next-line no-unused-expressions
+      card.offsetHeight;
+      card.classList.add("is-blinking");
+      setTimeout(() => card.classList.remove("is-blinking"), 2000);
+    }
+  };
+
+  const renderAssignees = (node) => {
+    const wrap = document.createElement("div");
+    wrap.className = "tree-node__meta";
+    const addChip = (label, cls = "tree-chip", userId = null) => {
+      const chip = document.createElement("span");
+      chip.className = cls;
+      const dot = document.createElement("span");
+      dot.className = "tree-chip__dot";
+      const txt = document.createElement("span");
+      txt.textContent = label;
+      chip.append(dot, txt);
+      if (userId) {
+        chip.dataset.userId = String(userId);
+        chip.classList.add("tree-chip--clickable");
+        chip.addEventListener("click", (e) => {
+          e.preventDefault();
+          focusRosterCard(userId);
+        });
+      }
+      wrap.appendChild(chip);
+    };
+    const list =
+      Array.isArray(node.assignees) && node.assignees.length
+        ? node.assignees
+        : node.researcher
+        ? [node.researcher]
+        : [];
+    if (!list.length) {
+      addChip("بدون مسئول", "tree-chip tree-chip--unassigned");
+    } else {
+      list.forEach((a) => addChip(a.full_name || a.username || "مسئول", "tree-chip", a.id));
+    }
+    return wrap;
+  };
+
+  const buildParentSelect = (currentId, parentId) => {
+    const select = document.createElement("select");
+    const rootOpt = new Option("پروژه اصلی", "");
+    select.appendChild(rootOpt);
+    projectTreeStore.nodes.forEach((n) => {
+      if (n.id === currentId) return;
+      const opt = new Option(n.name, n.id);
+      if (Number(parentId) === n.id) opt.selected = true;
+      select.appendChild(opt);
+    });
+    return select;
+  };
+
+  const buildResearcherSelect = (selectedIds = []) => {
+    const select = document.createElement("select");
+    select.multiple = true;
+    select.size = Math.max(3, Math.min(6, (projectTreeStore.assignees || []).length || 4));
+    const selectedSet = new Set((selectedIds || []).map((id) => String(id)));
+    projectTreeStore.assignees.forEach((u) => {
+      const label = u.full_name || u.username || `User ${u.id}`;
+      const opt = new Option(label, u.id);
+      if (selectedSet.has(String(u.id))) opt.selected = true;
+      select.appendChild(opt);
+    });
+    return select;
+  };
+
+  const openInlineEditor = (node, opts = {}) => {
+    if (!projectTreeStore.canEdit) return;
+    const target = opts.container || projectTreeStore.container;
+    if (!target) return;
+    target.querySelectorAll(".tree-inline-editor").forEach((el) => el.remove());
+
+    const editor = document.createElement("div");
+    editor.className = "tree-inline-editor";
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "tree-inline-editor__row";
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.placeholder = "نام پروژه / شاخه";
+    nameInput.value = node?.name || "";
+    nameRow.appendChild(nameInput);
+    editor.appendChild(nameRow);
+
+    const parentRow = document.createElement("div");
+    parentRow.className = "tree-inline-editor__row";
+    const parentLabel = document.createElement("span");
+    parentLabel.textContent = "والد:";
+    const parentSelect = buildParentSelect(node?.id, node?.parent_id ?? null);
+    parentRow.append(parentLabel, parentSelect);
+    editor.appendChild(parentRow);
+
+    const resRow = document.createElement("div");
+    resRow.className = "tree-inline-editor__row";
+    const resLabel = document.createElement("span");
+    resLabel.textContent = "مسئولین:";
+    const resSelect = buildResearcherSelect(
+      Array.isArray(node?.assignees) ? node.assignees.map((a) => a.id) : []
+    );
+    resRow.append(resLabel, resSelect);
+    editor.appendChild(resRow);
+
+    const actions = document.createElement("div");
+    actions.className = "tree-inline-editor__row";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "submit-btn submit-btn--small";
+    saveBtn.textContent = node && node.id ? "بروزرسانی" : "ذخیره";
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "ghost-btn";
+    cancelBtn.textContent = "بستن";
+    cancelBtn.addEventListener("click", () => editor.remove());
+    actions.append(saveBtn, cancelBtn);
+    editor.appendChild(actions);
+
+    saveBtn.addEventListener("click", async () => {
+      const payload = {
+        name: (nameInput.value || "").trim(),
+        parent_id: parentSelect.value || null,
+        assignee_ids: getSelectedAssigneeIds(resSelect),
+      };
+      if (!payload.name) {
+        alert("نام را وارد کنید.");
+        return;
+      }
+      const url = node && node.id ? `/api/project-tree/${node.id}` : "/api/project-tree";
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "خطا در ذخیره.");
+        return;
+      }
+      editor.remove();
+      loadProjectTree();
+    });
+
+    target.appendChild(editor);
+  };
+
+  const renderTreeNode = (node) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "tree-node";
+    wrapper.dataset.nodeId = node.id;
+
+    const head = document.createElement("div");
+    head.className = "tree-node__head";
+
+    const title = document.createElement("div");
+    title.className = "tree-node__title";
+    title.textContent = node.name;
+    const badge = document.createElement("span");
+    badge.className = "tree-node__badge";
+    badge.textContent = node.parent_id ? "شاخه" : "پروژه اصلی";
+    title.appendChild(badge);
+    head.appendChild(title);
+
+    if (projectTreeStore.canEdit) {
+      const actions = document.createElement("div");
+      actions.className = "tree-node__actions";
+      const addBtn = document.createElement("button");
+      addBtn.type = "button";
+      addBtn.className = "tree-action";
+      addBtn.textContent = "+ شاخه";
+      addBtn.addEventListener("click", () =>
+        openInlineEditor(
+          { id: null, name: "", parent_id: node.id, assignees: [] },
+          { isCreate: true, container: wrapper }
+        )
+      );
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "tree-action";
+      editBtn.textContent = "ویرایش";
+      editBtn.addEventListener("click", () => openInlineEditor(node, { container: wrapper }));
+      actions.append(addBtn, editBtn);
+      head.appendChild(actions);
+    }
+
+    wrapper.appendChild(head);
+
+    const people = renderAssignees(node);
+    wrapper.appendChild(people);
+
+    return wrapper;
+  };
+
+  const renderProjectTree = () => {
+    if (!projectTreeStore.container) return;
+    projectTreeStore.container.innerHTML = "";
+    if (!projectTreeStore.nodes.length) {
+      const p = document.createElement("p");
+      p.className = "empty-state";
+      p.textContent = "No project structure yet. Admins can add a trunk to get started.";
+      projectTreeStore.container.appendChild(p);
+      return;
+    }
+    const { roots, byId } = buildProjectTree(projectTreeStore.nodes);
+    projectTreeStore.lookup = byId;
+    const renderList = (nodes, isRoot = false) => {
+      const ul = document.createElement("ul");
+      ul.className = isRoot ? "tree-list" : "tree-children";
+      nodes.forEach((node) => {
+        const li = document.createElement("li");
+        li.appendChild(renderTreeNode(node));
+        if (node.children && node.children.length) {
+          li.appendChild(renderList(node.children, false));
+        }
+        ul.appendChild(li);
+      });
+      return ul;
+    };
+    if (projectTreeStore.canEdit) {
+      const addTrunkBtn = document.createElement("button");
+      addTrunkBtn.type = "button";
+      addTrunkBtn.className = "tree-action";
+      addTrunkBtn.textContent = "+ پروژه اصلی";
+      addTrunkBtn.addEventListener("click", () =>
+        openInlineEditor(
+          { id: null, name: "", parent_id: null, assignees: [] },
+          { isCreate: true, container: projectTreeStore.container }
+        )
+      );
+      projectTreeStore.container.appendChild(addTrunkBtn);
+    }
+    projectTreeStore.container.appendChild(renderList(roots, true));
+  };
+
+  const loadProjectTree = async () => {
+    if (!projectTreeStore.container) return;
+    projectTreeStore.container.innerHTML = '<p class="empty-state">Loading project map…</p>';
+    try {
+      const res = await fetch("/api/project-tree");
+      let data = [];
+      if (res.ok) {
+        data = await res.json();
+      }
+      projectTreeStore.nodes = Array.isArray(data) ? data : [];
+      refreshTreeAdminControls();
+      renderProjectTree();
+    } catch (err) {
+      projectTreeStore.nodes = [];
+      renderProjectTree();
+    }
+  };
+
+  const attachTreeAdminForms = () => {
+    if (!projectTreeStore.adminPanel) return;
+    const trunkForm = projectTreeStore.adminPanel.querySelector('[data-tree-form="trunk"]');
+    const branchForm = projectTreeStore.adminPanel.querySelector('[data-tree-form="branch"]');
+    const editForm = projectTreeStore.adminPanel.querySelector('[data-tree-form="edit"]');
+    if (trunkForm) {
+      trunkForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = (trunkForm.querySelector('input[name="name"]')?.value || "").trim();
+        if (!name) return;
+        const assigneeIds = getSelectedAssigneeIds(
+          trunkForm.querySelector("[data-tree-researcher-trunk]")
+        );
+        const payload = { name, assignee_ids: assigneeIds };
+        const res = await fetch("/api/project-tree", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "Could not add trunk.");
+          return;
+        }
+        trunkForm.reset();
+        loadProjectTree();
+      });
+    }
+    if (branchForm) {
+      branchForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const name = (branchForm.querySelector('input[name="name"]')?.value || "").trim();
+        const parentVal = branchForm.querySelector("[data-tree-parent]")?.value;
+        const assigneeIds = getSelectedAssigneeIds(
+          branchForm.querySelector("[data-tree-researcher]")
+        );
+        if (!name || !parentVal) {
+          alert("Choose a parent and name for the branch.");
+          return;
+        }
+        const payload = { name, parent_id: parentVal || null, assignee_ids: assigneeIds };
+        const res = await fetch("/api/project-tree", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "Could not add branch.");
+          return;
+        }
+        branchForm.reset();
+        loadProjectTree();
+      });
+    }
+    if (editForm) {
+      editForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const nodeId = editForm.querySelector("[data-tree-node]")?.value;
+        if (!nodeId) {
+          alert("Select a node to edit.");
+          return;
+        }
+        const name = (editForm.querySelector('input[name="name"]')?.value || "").trim();
+        const parentVal = editForm.querySelector("[data-tree-parent-edit]")?.value;
+        const researcherSelect = editForm.querySelector("[data-tree-researcher-edit]");
+        const appendToggle = editForm.querySelector("[data-tree-append-assignees]");
+        const currentNode = projectTreeStore.lookup.get(Number(nodeId));
+        const payload = {};
+        if (name) payload.name = name;
+        if (parentVal !== "__keep") payload.parent_id = parentVal || null;
+        if (researcherSelect) {
+          const vals = Array.from(researcherSelect.selectedOptions)
+            .map((o) => o.value)
+            .filter((v) => v !== "");
+          const existing = (currentNode?.assignees || []).map((a) => String(a.id));
+          if (appendToggle?.checked) {
+            // If nothing selected, keep existing; otherwise merge.
+            const merged = vals.length ? Array.from(new Set([...existing, ...vals])) : existing;
+            payload.assignee_ids = merged;
+          } else {
+            // Replace with selected (empty means clear).
+            payload.assignee_ids = vals;
+          }
+        }
+        const res = await fetch(`/api/project-tree/${nodeId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "Could not update node.");
+          return;
+        }
+        editForm.reset();
+        loadProjectTree();
+      });
+      const deleteBtn = editForm.querySelector("[data-tree-delete]");
+      if (deleteBtn) {
+        deleteBtn.addEventListener("click", async () => {
+          const nodeId = editForm.querySelector("[data-tree-node]")?.value;
+          if (!nodeId) return;
+          const ok = window.confirm("Delete this branch (and its children)?");
+          if (!ok) return;
+          const res = await fetch(`/api/project-tree/${nodeId}`, { method: "DELETE" });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            alert(data.error || "Could not delete node.");
+            return;
+          }
+          editForm.reset();
+          loadProjectTree();
+        });
+      }
+    }
+  };
+
+  const initProjectTree = () => {
+    const container = document.querySelector("[data-project-tree]");
+    if (!container) return;
+    projectTreeStore.container = container;
+    projectTreeStore.canEdit =
+      container.dataset.treeCanEdit === "1" || container.dataset.treeCanEdit === "true";
+    projectTreeStore.adminPanel = document.querySelector("[data-project-tree-admin]");
+    projectTreeStore.assignees = treeAssigneesFromDom();
+    if (projectTreeStore.canEdit) {
+      refreshTreeAdminControls();
+      attachTreeAdminForms();
+    }
+    loadProjectTree();
   };
 
   const initPasswordVisibility = () => {
@@ -1780,7 +2624,39 @@
     initGlobalsFromDom();
     initPasswordVisibility();
     fetchUnreadMailCount();
+    fetchChatUnread();
+    if (chatUnreadTimer) clearInterval(chatUnreadTimer);
+    chatUnreadTimer = setInterval(fetchChatUnread, 10000);
+    const initTaskTabs = () => {
+      document.querySelectorAll(".tasks-tabs").forEach((tabBar) => {
+        const card = tabBar.closest(".tasks-side-card") || tabBar.parentElement;
+        const panels = card.querySelectorAll(".tasks-tab-panel");
+        const buttons = tabBar.querySelectorAll("[data-task-tab]");
+        const activate = (filter) => {
+          buttons.forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.taskTab === filter);
+          });
+          panels.forEach((panel) => {
+            panel.classList.toggle(
+              "is-active",
+              panel.dataset.taskFilter === filter
+            );
+          });
+        };
+        buttons.forEach((btn) => {
+          btn.addEventListener("click", () => {
+            activate(btn.dataset.taskTab);
+          });
+        });
+        const defaultTab =
+          tabBar.querySelector(".tasks-tab.active")?.dataset.taskTab ||
+          buttons[0]?.dataset.taskTab;
+        if (defaultTab) activate(defaultTab);
+      });
+    };
+    initTaskTabs();
     initMailboxPage();
+    initProjectTree();
 
     const hasTaskContext = document.getElementById("taskGlobals");
     if (!hasTaskContext) {

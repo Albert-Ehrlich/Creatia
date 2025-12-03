@@ -7,7 +7,15 @@
         <p class="page-subtitle">Your personal workspace and activity</p>
       </div>
       <div class="header-actions">
-        <a href="{{ url_for('mails') }}" class="btn-mail" data-unread="{{ unread_mails or 0 }}">
+        <a href="{{ url_for('profile') }}" class="btn-mail">Profile</a>
+        <a href="{{ url_for('chat') }}" class="btn-mail chat-link">
+          Chat <span class="btn-mail__badge" hidden>0</span>
+        </a>
+        <a
+          href="{{ url_for('mails') }}"
+          class="btn-mail"
+          data-unread="{{ unread_mails or 0 }}"
+        >
           Mails <span class="btn-mail__badge" hidden>0</span>
         </a>
         <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
@@ -49,12 +57,41 @@
           <div>
             <h3>Tasks</h3>
           </div>
+          <div class="tasks-tabs" role="tablist">
+            <button class="tasks-tab active" data-task-tab="active">
+              Active <span class="tasks-tab__badge tasks-tab__badge--green" data-active-badge hidden>!</span>
+            </button>
+            <button class="tasks-tab" data-task-tab="overdue">
+              Overdue <span class="tasks-tab__badge" data-overdue-badge hidden>!</span>
+            </button>
+            <button class="tasks-tab" data-task-tab="done">Done</button>
+          </div>
         </div>
-        <div class="tasks-side-list" data-role="tasks-panel">
-          <p class="empty-state">Loading tasks…</p>
+        <div class="tasks-tab-panels">
+          <div
+            class="tasks-side-list tasks-tab-panel is-active"
+            data-role="tasks-panel"
+            data-task-filter="active"
+          >
+            <p class="empty-state">Loading tasks…</p>
+          </div>
+          <div
+            class="tasks-side-list tasks-tab-panel"
+            data-role="tasks-panel"
+            data-task-filter="overdue"
+          >
+            <p class="empty-state">Loading tasks…</p>
+          </div>
+          <div
+            class="tasks-side-list tasks-tab-panel"
+            data-role="tasks-panel"
+            data-task-filter="done"
+          >
+            <p class="empty-state">Loading tasks…</p>
+          </div>
         </div>
       </div>
-      <div class="dashboard-card dual-calendar-card card-quarter">
+      <!-- <div class="dashboard-card dual-calendar-card card-quarter">
         <h3>📝 Your Tasks</h3>
         <p>
           View and manage your assigned tasks. Track progress and update status
@@ -62,9 +99,9 @@
         </p>
         <div class="muted-panel muted-panel--note">No tasks assigned yet</div>
         <a href="#" class="btn-action">View Tasks</a>
-      </div>
+      </div> -->
 
-      <div class="dashboard-card dual-calendar-card card-quarter">
+      <!-- <div class="dashboard-card dual-calendar-card card-quarter">
         <h3>📊 My Projects</h3>
         <p>
           See all projects you're involved in. Check project status, deadlines,
@@ -72,9 +109,9 @@
         </p>
         <div class="muted-panel muted-panel--note">No projects joined yet</div>
         <a href="#" class="btn-action">Browse Projects</a>
-      </div>
+      </div> -->
 
-      <div class="dashboard-card dual-calendar-card card-quarter">
+      <!-- <div class="dashboard-card dual-calendar-card card-quarter">
         <h3>👤 Profile Settings</h3>
         <p>
           Update your profile information, password, and account preferences.
@@ -82,17 +119,17 @@
         <div class="muted-panel muted-panel--compact">
           <p>Email Notifications: <strong>Enabled</strong></p>
         </div>
-        <a href="#" class="btn-action">Edit Profile</a>
-      </div>
+        <a href="{{ url_for('profile') }}" class="btn-action">Edit Profile</a>
+      </div> -->
 
-      <div class="dashboard-card dual-calendar-card card-quarter">
+      <!-- <div class="dashboard-card dual-calendar-card card-quarter">
         <h3>📅 Activity</h3>
         <p>View your recent activity and engagement history on the platform.</p>
         <div class="muted-panel muted-panel--note">Just logged in</div>
         <a href="#" class="btn-action">View Activity</a>
-      </div>
+      </div> -->
 
-      <div class="dashboard-card dual-calendar-card card-quarter">
+      <!-- <div class="dashboard-card dual-calendar-card card-quarter">
         <h3>💬 Messages</h3>
         <p>
           Communicate with your team members and managers through direct
@@ -102,9 +139,9 @@
           <p>New Messages: <strong>0</strong></p>
         </div>
         <a href="#" class="btn-action">Check Messages</a>
-      </div>
+      </div> -->
 
-      <div class="dashboard-card dual-calendar-card card-quarter">
+      <!-- <div class="dashboard-card dual-calendar-card card-quarter">
         <h3>🎯 Goals</h3>
         <p>
           Set and track personal goals to improve your productivity and
@@ -112,8 +149,10 @@
         </p>
         <div class="muted-panel muted-panel--note">No goals set yet</div>
         <a href="#" class="btn-action">Set Goals</a>
-      </div>
+      </div> -->
     </div>
+    {% include "project_tree.html" %}
+    {% include "user_cards.html" %}
     <div
       id="taskGlobals"
       class="task-globals"

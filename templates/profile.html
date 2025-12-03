@@ -1,0 +1,1013 @@
+{% extends "base.html" %} {% block title %}Profile{% endblock %} {% block
+content %} {% set display_name = user.full_name or user.username %} {% set
+role_labels = {"admin": "مدیر پروژه", "supervisor": "ناظر پروژه", "researcher":
+"پژوهشگر"} %} {% set role_label = role_labels.get(user.role,
+user.role|capitalize) %} {% set education_value = user.education or "تحصیلات:
+دکتری فیزیک" %} {% set resume_url = url_for('uploaded_file',
+filename=user.resume_path) if user.resume_path else None %} {% set avatar_src =
+url_for('uploaded_file', filename=user.avatar_path) if user.avatar_path else
+url_for('static', filename='assets/img/profile-img.jpg') %} {% set
+assigned_width = 100 if assigned_count else 0 %} {% set completed_width =
+completion_pct if completion_pct <= 100 else 100 %} {% set overdue_width =
+overdue_pct if overdue_pct <= 100 else 100 %}
+<div class="content-wrapper admin-dashboard-page profile-page">
+  <section class="content-header profile-page-header">
+    <div class="page-header">
+      <div>
+        <h1>Profile</h1>
+        <p class="page-subtitle">Manage your personal information</p>
+      </div>
+      <div class="header-actions">
+        <button
+          type="button"
+          class="btn-mail"
+          id="editProfileBtn"
+          data-default-text="Edit profile"
+        >
+          Edit profile
+        </button>
+        <button
+          type="button"
+          class="btn-logout btn-cancel-edit"
+          id="cancelProfileEdit"
+          hidden
+        >
+          Cancel
+        </button>
+        <a
+          href="{{ url_for('admin_dashboard') if user.role=='admin' else (url_for('supervisor_dashboard') if user.role=='supervisor' else url_for('researcher_dashboard')) }}"
+          class="btn-mail"
+          >Back to dashboard</a
+        >
+        <a href="{{ url_for('chat') }}" class="btn-mail chat-link">
+          Chat <span class="btn-mail__badge" hidden>0</span>
+        </a>
+        <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+      </div>
+    </div>
+  </section>
+  <section
+    class="profile-hero profile-hero--card profile-hero--rtl persian-script"
+    lang="fa"
+    dir="rtl"
+  >
+    <div class="profile-hero__overlay"></div>
+    <div class="profile-hero__header">
+      <label class="profile-avatar profile-avatar--upload" for="avatarInput">
+        <img src="{{ avatar_src }}" alt="Profile" data-avatar-preview />
+        <span class="avatar-edit-hint">تغییر عکس</span>
+        <span class="avatar-handle avatar-handle--tl"></span>
+        <span class="avatar-handle avatar-handle--tr"></span>
+        <span class="avatar-handle avatar-handle--bl"></span>
+        <span class="avatar-handle avatar-handle--br"></span>
+      </label>
+      <div class="profile-hero__text">
+        <div class="profile-hero__row">
+          <div class="profile-field profile-field--hero">
+            <div
+              class="profile-name"
+              data-display="full_name"
+              data-placeholder="{{ user.username }}"
+              data-edit-target="full_name"
+              contenteditable="false"
+            >
+              {{ display_name }}
+            </div>
+          </div>
+          <button
+            type="button"
+            class="edit-pen edit-pen--hero"
+            data-target="full_name"
+            aria-label="Edit full name"
+          >
+            ✎
+          </button>
+        </div>
+        <div class="profile-hero__row">
+          <div class="profile-field profile-field--hero">
+            <div class="profile-subtitle">
+              ایمیل:<span
+                data-display="email"
+                data-placeholder="{{ user.email }}"
+                data-edit-target="email"
+                contenteditable="false"
+                >{{ user.email }}</span
+              >
+            </div>
+          </div>
+          <button
+            type="button"
+            class="edit-pen edit-pen--hero"
+            data-target="email"
+            aria-label="Edit email"
+          >
+            ✎
+          </button>
+        </div>
+        <div class="profile-hero__row">
+          <div class="profile-field profile-field--hero">
+            <div class="profile-subtitle">
+              تلفن:
+              <span
+                data-display="phone_number"
+                data-placeholder="شماره ثبت نشده"
+                data-edit-target="phone_number"
+                contenteditable="false"
+              >
+                {{ user.phone_number or "" }}
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="edit-pen edit-pen--hero"
+            data-target="phone_number"
+            aria-label="Edit phone number"
+          >
+            ✎
+          </button>
+        </div>
+        <div class="profile-hero__row profile-hero__role">
+          <div class="profile-role">سمت: {{ role_label }}</div>
+        </div>
+        <div class="profile-hero__row profile-hero__education">
+          <div class="profile-field profile-field--hero">
+            <div
+              class="profile-education"
+              data-display="education"
+              data-placeholder="{{ education_value }}"
+              data-edit-target="education"
+              contenteditable="false"
+            >
+              {{ education_value }}
+            </div>
+          </div>
+          <button
+            type="button"
+            class="edit-pen edit-pen--hero"
+            data-target="education"
+            aria-label="Edit education"
+          >
+            ✎
+          </button>
+        </div>
+        <div class="profile-hero__row profile-hero__resume">
+          <label
+            class="resume-clip"
+            aria-label="Upload resume (PDF)"
+            for="resumeInput"
+          >
+            📎
+          </label>
+          <a
+            href="{{ resume_url or '#' }}"
+            target="_blank"
+            class="profile-resume-link"
+            {%
+            if
+            not
+            resume_url
+            %}hidden{%
+            endif
+            %}
+          >
+            رزومه
+          </a>
+          <span
+            class="profile-resume-missing"
+            data-resume-placeholder
+            {%
+            if
+            resume_url
+            %}hidden{%
+            endif
+            %}
+          >
+            رزومه ثبت نشده
+          </span>
+          <div class="resume-error" data-resume-error hidden></div>
+        </div>
+        <div class="profile-hero__row">
+          {% set responsibility_default = "مسئولیت در تیم: مدیریت و هماهنگی تیم - مدیریت و تخصیص سیستم محاسباتی" %}
+          {% set supervisor_resp = "مسئولیت در تیم: نظارت و انجام امور اداری پروژه‌ها" %}
+          {% set responsibility_placeholder = supervisor_resp if user.role == 'supervisor' else responsibility_default %}
+          {% set responsibility_value = user.responsibility or responsibility_placeholder %}
+          <div
+            class="profile-responsibility"
+            data-display="responsibility"
+            data-placeholder="{{ responsibility_placeholder }}"
+            data-edit-target="responsibility"
+            contenteditable="false"
+          >
+            {{ responsibility_value }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- <div class="profile-badges">
+      <div class="badge-card">
+        <span class="badge-title">تاریخ عضویت</span>
+        <span
+          class="badge-value"
+          data-join-date="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}"
+          >نامشخص</span
+        >
+      </div>
+      <div class="badge-card">
+        <span class="badge-title">وضعیت</span>
+        <span class="badge-value"
+          >{{ 'فعال' if user.is_active else 'غیرفعال' }}</span
+        >
+      </div>
+    </div> -->
+  </section>
+
+  <section class="content profile-body">
+    {% if error %}
+    <div class="flash flash-danger">{{ error }}</div>
+    {% endif %}
+    <form
+      id="profileForm"
+      method="POST"
+      class="profile-inline-form stacked-form"
+      enctype="multipart/form-data"
+    >
+      <input type="hidden" name="username" value="{{ user.username }}" />
+      <input type="hidden" name="education" value="{{ education_value }}" />
+      <input type="hidden" name="full_name" value="{{ display_name }}" />
+      <input type="hidden" name="email" value="{{ user.email }}" />
+      <input type="hidden" name="phone_number" value="{{ user.phone_number or '' }}" />
+      <input
+        type="hidden"
+        name="responsibility"
+        value="{{ user.responsibility or '' }}"
+      />
+      <input
+        type="hidden"
+        name="avatar_scale"
+        value="{{ user.avatar_scale or 1.0 }}"
+      />
+      <input
+        type="hidden"
+        name="avatar_offset_x"
+        value="{{ user.avatar_offset_x or 0 }}"
+      />
+      <input
+        type="hidden"
+        name="avatar_offset_y"
+        value="{{ user.avatar_offset_y or 0 }}"
+      />
+      <input
+        type="file"
+        id="avatarInput"
+        name="avatar"
+        accept="image/*"
+        class="hidden-file-input"
+      />
+      <input
+        id="resumeInput"
+        type="file"
+        name="resume"
+        accept="application/pdf,.pdf"
+        class="hidden-file-input"
+      />
+
+      <div class="profile-panels task-stats">
+        <div
+          class="dashboard-card dual-calendar-card profile-info-card card-half skills"
+        >
+          <h3>Tasks Stats</h3>
+
+          <div class="progress-summary">
+            <div class="progress-row">
+              <div class="progress-label">
+                <span class="dot dot-blue"></span>
+                Assigned tasks: {{ assigned_count }}
+              </div>
+              <div class="progress">
+                <div class="progress-bar-wrap">
+                  <div
+                    class="progress-bar progress-bar--blue"
+                    role="progressbar"
+                    data-progress-width="{{ assigned_width }}"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="progress-row">
+              <div class="progress-label">
+                <span class="dot dot-green"></span>
+                Completed tasks: {{ completed_count }}
+              </div>
+              <div class="progress">
+                <div class="progress-bar-wrap">
+                  <div
+                    class="progress-bar progress-bar--green"
+                    role="progressbar"
+                    data-progress-width="{{ completed_width }}"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="progress-row">
+              <div class="progress-label">
+                <span class="dot dot-red"></span>
+                Overdue tasks: {{ overdue_count }}
+              </div>
+              <div class="progress">
+                <div class="progress-bar-wrap">
+                  <div
+                    class="progress-bar progress-bar--red"
+                    role="progressbar"
+                    data-progress-width="{{ overdue_width }}"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div class="progress-row">
+              <div class="progress-label">
+                <span class="dot dot-green"></span>
+                On-time completion
+                <span class="val">{{ on_time_pct }}%</span>
+              </div>
+              <div class="progress">
+                <div class="progress-bar-wrap">
+                  <div
+                    class="progress-bar progress-bar--green"
+                    role="progressbar"
+                    data-progress-width="{{ on_time_pct }}"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="dashboard-card dual-calendar-card profile-info-card card-half files-card"
+        >
+          <h3>فایل‌ها</h3>
+          <ul class="files-list">
+            {% for key, label in profile_file_labels %} {% set stored =
+            profile_files.get(key) if profile_files else None %}
+            <li
+              class="file-row"
+              data-file-key="{{ key }}"
+              {%
+              if
+              stored
+              %}data-stored-path="{{ stored.stored_path }}"
+              {%
+              endif
+              %}
+              {%
+              if
+              stored
+              %}data-stored-name="{{ stored.filename }}"
+              {%
+              endif
+              %}
+            >
+              <span class="file-label">{{ label }}</span>
+              <span class="file-name" data-file-name>
+                {{ stored.filename if stored else "" }}
+              </span>
+              <button
+                type="button"
+                class="file-remove-btn"
+                data-remove-btn
+                title="حذف فایل"
+                aria-label="حذف فایل"
+              >
+                ×
+              </button>
+              <a
+                href="{{ url_for('uploaded_file', filename=stored.stored_path) if stored else '#' }}"
+                target="_blank"
+                class="file-link"
+                data-file-link
+                {%
+                if
+                not
+                stored
+                %}hidden{%
+                endif
+                %}
+              >
+                مشاهده
+              </a>
+              <label class="file-upload-pill">
+                +
+                <input
+                  type="file"
+                  name="uploads"
+                  class="hidden-file-input"
+                  accept=".pdf,.doc,.docx,.zip,.rar,.txt"
+                  data-file-key="{{ key }}"
+                />
+                <input
+                  type="hidden"
+                  name="remove_files"
+                  value="{{ key }}"
+                  data-remove-input
+                  disabled
+                />
+              </label>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </form>
+  </section>
+</div>
+
+<script>
+  window.history.scrollRestoration = "manual";
+  document.addEventListener("DOMContentLoaded", () => {
+    const page = document.querySelector(".profile-page");
+    const editBtn = document.getElementById("editProfileBtn");
+    const cancelBtn = document.getElementById("cancelProfileEdit");
+    const form = document.getElementById("profileForm");
+    const editPens = document.querySelectorAll(".edit-pen");
+    const showPw = document.getElementById("showProfilePw");
+    const pwInput = form?.querySelector('input[name="password"]');
+    const pwField = document.querySelector(".editable-password");
+    const pwLink = document.getElementById("togglePasswordField");
+    const editableDisplays = document.querySelectorAll("[data-edit-target]");
+    const joinDateEl = document.querySelector("[data-join-date]");
+    const defaultEditText = editBtn?.dataset.defaultText || "Edit profile";
+    const saveText = "Save";
+    const scrollKey = "profileScrollY";
+    const resumeClip = document.querySelector(".resume-clip");
+    const resumeInput = document.getElementById("resumeInput");
+    const resumePlaceholder = document.querySelector(
+      "[data-resume-placeholder]"
+    );
+    const resumeError = document.querySelector("[data-resume-error]");
+    const resumeLink = document.querySelector(".profile-resume-link");
+    const avatarInput = document.getElementById("avatarInput");
+    const avatarPreview = document.querySelector("[data-avatar-preview]");
+    const avatarHandles = document.querySelectorAll(".avatar-handle");
+    const initialAvatarSrc = avatarPreview?.getAttribute("src") || "";
+    const avatarScaleInput = form?.querySelector('input[name="avatar_scale"]');
+    const avatarOffsetXInput = form?.querySelector(
+      'input[name="avatar_offset_x"]'
+    );
+    const avatarOffsetYInput = form?.querySelector(
+      'input[name="avatar_offset_y"]'
+    );
+    const avatarContainer = document.querySelector(".profile-avatar--upload");
+    const avatarControls = document.querySelector(".avatar-controls");
+    const responsibilityInput = form?.querySelector(
+      'input[name="responsibility"]'
+    );
+    const initialResumeHref = resumeLink?.getAttribute("href") || "";
+    const initialResumeHidden = resumeLink?.hasAttribute("hidden");
+    const initialResumePlaceholderHidden =
+      resumePlaceholder?.hasAttribute("hidden");
+    const initialResumePlaceholderText =
+      resumePlaceholder?.textContent?.trim() || "رزومه ثبت نشده";
+    const fileRows = document.querySelectorAll(".files-card .file-row");
+    const fileInputs = document.querySelectorAll(
+      '.files-card input[type="file"]'
+    );
+    const filePills = document.querySelectorAll(
+      ".files-card .file-upload-pill"
+    );
+    const fileRemoveButtons = document.querySelectorAll(
+      ".files-card [data-remove-btn]"
+    );
+    const fileRemoveInputs = document.querySelectorAll(
+      ".files-card [data-remove-input]"
+    );
+    const isEditing = () => page?.classList.contains("editing");
+    const openFileInput = (input) => {
+      if (!input) return;
+      input.disabled = false;
+      input.removeAttribute("disabled");
+      input.tabIndex = 0;
+      if (typeof input.showPicker === "function") {
+        try {
+          input.showPicker();
+          return;
+        } catch (err) {
+          /* fall back to click when showPicker is not available */
+        }
+      }
+      input.click();
+    };
+    const toggleFileMode = (editing) => {
+      fileInputs.forEach((input) => {
+        if (editing) {
+          input.disabled = false;
+          input.removeAttribute("disabled");
+          input.tabIndex = 0;
+        } else {
+          input.disabled = true;
+          input.setAttribute("disabled", "disabled");
+          input.tabIndex = -1;
+        }
+      });
+      fileRemoveButtons.forEach((btn) => {
+        btn.disabled = !editing;
+      });
+    };
+    const showFileAttachment = (row, input) => {
+      const label =
+        row.querySelector(".file-label")?.textContent?.trim() || "File";
+      const link = row.querySelector("[data-file-link]");
+      const nameSpan = row.querySelector("[data-file-name]");
+      const storedPath = row.dataset.storedPath;
+      const chosen =
+        input.dataset.selectedName ||
+        input.files?.[0]?.name ||
+        nameSpan?.textContent?.trim();
+      if (storedPath && link && !link.hasAttribute("hidden")) {
+        window.open(link.href, "_blank");
+        return;
+      }
+      alert(
+        chosen ? `${label}: ${chosen}` : `${label}: هیچ فایلی پیوست نشده است`
+      );
+    };
+
+    const syncFormFromDisplays = () => {
+      editableDisplays.forEach((el) => {
+        const key = el.dataset.editTarget;
+        const input = form?.querySelector(`[name="${key}"]`);
+        if (input) input.value = el.textContent.trim();
+      });
+      if (avatarInput && avatarInput.files?.length === 0) {
+        avatarInput.value = "";
+      }
+      if (responsibilityInput) {
+        responsibilityInput.value =
+          document
+            .querySelector('[data-edit-target="responsibility"]')
+            ?.textContent.trim() || responsibilityInput.value;
+      }
+    };
+
+    const syncDisplays = () => {
+      const displays = document.querySelectorAll("[data-display]");
+      const active = document.activeElement;
+      displays.forEach((el) => {
+        if (el === active && el.getAttribute("contenteditable") === "true") {
+          return;
+        }
+        const key = el.dataset.display;
+        const formInput = form?.querySelector(`[name="${key}"]`);
+        const val = formInput?.value?.trim();
+        el.textContent = val || el.dataset.placeholder || "";
+      });
+    };
+
+    const startEditing = () => {
+      page?.classList.add("editing");
+      toggleFileMode(true);
+      syncFormFromDisplays();
+      if (editBtn) editBtn.textContent = saveText;
+      if (cancelBtn) cancelBtn.hidden = false;
+      editableDisplays.forEach((el) => {
+        el.contentEditable = "true";
+        el.classList.add("is-editing");
+      });
+      if (avatarControls) avatarControls.style.display = "flex";
+    };
+    const stopEditing = () => {
+      form?.reset();
+      page?.classList.remove("editing");
+      toggleFileMode(false);
+      fileInputs.forEach((input) => {
+        input.dataset.selectedName = "";
+      });
+      const uploadedBase = "{{ url_for('uploaded_file', filename='') }}";
+      fileRows.forEach((row) => {
+        const nameSpan = row.querySelector("[data-file-name]");
+        const link = row.querySelector("[data-file-link]");
+        const removeInput = row.querySelector("[data-remove-input]");
+        const storedName = row.dataset.storedName || "";
+        const storedPath = row.dataset.storedPath || "";
+        if (nameSpan) nameSpan.textContent = storedName;
+        if (link) {
+          if (storedPath) {
+            link.href = `${uploadedBase}${storedPath}`;
+            link.removeAttribute("hidden");
+          } else {
+            link.setAttribute("hidden", "");
+            link.href = "#";
+          }
+        }
+        if (removeInput) removeInput.disabled = true;
+        row.classList.remove("file-removed");
+      });
+      document
+        .querySelectorAll(".editable-field.field-editing")
+        .forEach((node) => node.classList.remove("field-editing"));
+      syncDisplays();
+      if (resumeInput) resumeInput.value = "";
+      if (avatarInput) avatarInput.value = "";
+      if (avatarPreview && initialAvatarSrc) {
+        avatarPreview.src = initialAvatarSrc;
+        avatarPreview.style.transform = `translate(${
+          avatarOffsetXInput?.value || 0
+        }%, ${avatarOffsetYInput?.value || 0}%) scale(${
+          avatarScaleInput?.value || 1
+        })`;
+      }
+      if (avatarScaleInput)
+        avatarScaleInput.value = "{{ user.avatar_scale or 1.0 }}";
+      if (avatarOffsetXInput)
+        avatarOffsetXInput.value = "{{ user.avatar_offset_x or 0 }}";
+      if (avatarOffsetYInput)
+        avatarOffsetYInput.value = "{{ user.avatar_offset_y or 0 }}";
+      if (resumeLink) {
+        if (initialResumeHidden) resumeLink.setAttribute("hidden", "");
+        else resumeLink.removeAttribute("hidden");
+        resumeLink.href = initialResumeHref || "#";
+        resumeLink.onclick = null;
+      }
+      if (resumeError) resumeError.hidden = true;
+      if (resumePlaceholder) {
+        resumePlaceholder.textContent = initialResumePlaceholderText;
+        if (initialResumePlaceholderHidden) {
+          resumePlaceholder.hidden = true;
+        } else {
+          resumePlaceholder.hidden = false;
+        }
+      }
+      if (pwInput) pwInput.type = showPw?.checked ? "text" : "password";
+      if (editBtn) editBtn.textContent = defaultEditText;
+      if (cancelBtn) cancelBtn.hidden = true;
+      editableDisplays.forEach((el) => {
+        el.contentEditable = "false";
+        el.classList.remove("is-editing");
+      });
+      if (avatarControls) avatarControls.style.display = "none";
+    };
+
+    editBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      const isEditing = page?.classList.contains("editing");
+      if (isEditing) {
+        syncFormFromDisplays();
+        sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+        if (form?.requestSubmit) form.requestSubmit();
+        else form?.submit();
+      } else {
+        startEditing();
+      }
+    });
+    cancelBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      stopEditing();
+    });
+
+    editPens.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.target;
+        const isHero = btn.classList.contains("edit-pen--hero");
+        startEditing();
+        if (isHero) {
+          const editable = document.querySelector(
+            `[data-edit-target="${target}"]`
+          );
+          if (editable) {
+            editable.focus();
+            const range = document.createRange();
+            range.selectNodeContents(editable);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } else {
+          const input = form?.querySelector(`[name="${target}"]`);
+          if (input) {
+            input.focus();
+            input.select?.();
+          }
+        }
+        syncDisplays();
+      });
+    });
+
+    pwLink?.addEventListener("click", () => {
+      startEditing();
+      pwField?.classList.add("field-editing");
+      if (pwInput) {
+        pwInput.focus();
+        pwInput.select?.();
+      }
+    });
+
+    resumeClip?.addEventListener("click", () => {
+      startEditing();
+    });
+
+    resumeInput?.addEventListener("change", () => {
+      const file = resumeInput.files?.[0];
+      if (resumeError) resumeError.hidden = true;
+      if (!file) return;
+      if (!file.name.toLowerCase().endsWith(".pdf")) {
+        alert("لطفاً فقط فایل PDF بارگذاری کنید.");
+        resumeInput.value = "";
+        return;
+      }
+      if (resumePlaceholder) {
+        resumePlaceholder.textContent = file.name;
+        resumePlaceholder.hidden = true;
+      }
+      if (resumeLink) {
+        resumeLink.textContent = "رزومه";
+        resumeLink.removeAttribute("hidden");
+        resumeLink.href = "#";
+        resumeLink.onclick = (e) => e.preventDefault();
+      }
+    });
+
+    avatarInput?.addEventListener("click", (e) => {
+      if (!isEditing()) {
+        e.preventDefault();
+        return;
+      }
+    });
+    avatarInput?.addEventListener("change", () => {
+      const file = avatarInput.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        alert("لطفاً یک فایل تصویر انتخاب کنید.");
+        avatarInput.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (avatarPreview && typeof reader.result === "string") {
+          avatarPreview.src = reader.result;
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    const applyAvatarTransform = () => {
+      const sx = parseFloat((avatarScaleInput?.value || "1").toString()) || 1;
+      const ox = parseFloat((avatarOffsetXInput?.value || "0").toString()) || 0;
+      const oy = parseFloat((avatarOffsetYInput?.value || "0").toString()) || 0;
+      if (avatarPreview) {
+        avatarPreview.style.transform = `translate(${ox}%, ${oy}%) scale(${sx})`;
+      }
+      if (avatarScaleInput) avatarScaleInput.value = sx;
+      if (avatarOffsetXInput) avatarOffsetXInput.value = ox;
+      if (avatarOffsetYInput) avatarOffsetYInput.value = oy;
+    };
+
+    ["input", "change"].forEach((evt) => {
+      avatarScaleInput?.addEventListener(evt, applyAvatarTransform);
+      avatarOffsetXInput?.addEventListener(evt, applyAvatarTransform);
+      avatarOffsetYInput?.addEventListener(evt, applyAvatarTransform);
+    });
+    applyAvatarTransform();
+
+    fileInputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        const file = input.files?.[0];
+        input.dataset.selectedName = file?.name || "";
+        const row = input.closest(".file-row");
+        const nameSpan = row?.querySelector("[data-file-name]");
+        const link = row?.querySelector("[data-file-link]");
+        const removeInput = row?.querySelector("[data-remove-input]");
+        if (row) {
+          row.dataset.storedPath = "";
+          row.dataset.storedName = "";
+          row.classList.remove("file-removed");
+        }
+        if (nameSpan) nameSpan.textContent = file?.name || "";
+        if (link) {
+          link.setAttribute("hidden", "");
+          link.href = "#";
+        }
+        if (removeInput) {
+          removeInput.disabled = true;
+        }
+      });
+    });
+
+    filePills.forEach((pill) => {
+      const row = pill.closest(".file-row");
+      const input = row?.querySelector('input[type="file"]');
+      if (!row || !input) return;
+      pill.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (isEditing()) {
+          openFileInput(input);
+        } else {
+          showFileAttachment(row, input);
+        }
+      });
+    });
+
+    fileRows.forEach((row) => {
+      const input = row.querySelector('input[type="file"]');
+      const link = row.querySelector("[data-file-link]");
+      const removeBtn = row.querySelector("[data-remove-btn]");
+      const removeInput = row.querySelector("[data-remove-input]");
+      row.addEventListener("click", (e) => {
+        if (!input) return;
+        if (e.target === input) return;
+        if (e.target === removeBtn) return;
+        e.stopPropagation();
+        if (isEditing()) {
+          openFileInput(input);
+        } else if (
+          row.dataset.storedPath &&
+          link &&
+          !link.hasAttribute("hidden")
+        ) {
+          link.click();
+        } else {
+          showFileAttachment(row, input);
+        }
+      });
+
+      removeBtn?.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isEditing()) return;
+        row.classList.add("file-removed");
+        const nameSpan = row.querySelector("[data-file-name]");
+        const link = row.querySelector("[data-file-link]");
+        if (nameSpan) nameSpan.textContent = "";
+        if (link) {
+          link.setAttribute("hidden", "");
+          link.href = "#";
+        }
+        if (removeInput) removeInput.disabled = false;
+        row.dataset.storedPath = "";
+        row.dataset.storedName = "";
+        input.value = "";
+      });
+    });
+
+    toggleFileMode(isEditing());
+
+    const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
+
+    const progressBars = document.querySelectorAll("[data-progress-width]");
+    const animateProgressBars = () => {
+      progressBars.forEach((bar) => {
+        if (bar.dataset.animated === "true") return;
+        const val = parseFloat(bar.dataset.progressWidth || "0") || 0;
+        const clamped = clamp(val, 0, 100);
+        bar.dataset.animated = "true";
+        bar.style.width = "0%";
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            bar.style.width = `${clamped}%`;
+          });
+        });
+      });
+    };
+
+    const statsSection = document.querySelector(".task-stats");
+    if (statsSection && "IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(
+        (entries, obs) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              animateProgressBars();
+              obs.disconnect();
+            }
+          });
+        },
+        { threshold: 0.35 }
+      );
+      observer.observe(statsSection);
+    } else {
+      animateProgressBars();
+    }
+
+    let dragMode = null;
+    let dragStart = null;
+
+    const beginDrag = (mode, event) => {
+      const rect = avatarContainer?.getBoundingClientRect();
+      if (!rect) return;
+      dragMode = mode;
+      dragStart = {
+        x: event.clientX,
+        y: event.clientY,
+        rect,
+        scale: parseFloat(avatarScaleInput?.value || "1") || 1,
+        ox: parseFloat(avatarOffsetXInput?.value || "0") || 0,
+        oy: parseFloat(avatarOffsetYInput?.value || "0") || 0,
+      };
+      document.addEventListener("pointermove", onDrag);
+      document.addEventListener("pointerup", endDrag);
+      event.preventDefault();
+    };
+
+    const onDrag = (event) => {
+      if (!dragMode || !dragStart) return;
+      const dxPx = event.clientX - dragStart.x;
+      const dyPx = event.clientY - dragStart.y;
+      if (dragMode === "move") {
+        const nx = dragStart.ox + (dxPx / dragStart.rect.width) * 100;
+        const ny = dragStart.oy + (dyPx / dragStart.rect.height) * 100;
+        avatarOffsetXInput.value = nx;
+        avatarOffsetYInput.value = ny;
+      } else if (dragMode === "resize") {
+        const delta = -dyPx / 150;
+        const ns = clamp(dragStart.scale + delta, 0.5, 2);
+        avatarScaleInput.value = ns;
+      }
+      applyAvatarTransform();
+    };
+
+    const endDrag = () => {
+      dragMode = null;
+      dragStart = null;
+      document.removeEventListener("pointermove", onDrag);
+      document.removeEventListener("pointerup", endDrag);
+    };
+
+    avatarContainer?.addEventListener("pointerdown", (e) => {
+      if (!isEditing()) {
+        e.preventDefault();
+        return;
+      }
+      const isHandle = e.target.classList.contains("avatar-handle");
+      beginDrag(isHandle ? "resize" : "move", e);
+    });
+
+    avatarHandles.forEach((handle) => {
+      handle.addEventListener("pointerdown", (e) => {
+        if (!isEditing()) {
+          e.preventDefault();
+          return;
+        }
+        beginDrag("resize", e);
+      });
+    });
+
+    form?.addEventListener("submit", () => {
+      sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+    });
+    editableDisplays.forEach((el) => {
+      el.addEventListener("input", () => {
+        const key = el.dataset.editTarget;
+        const input = form?.querySelector(`[name="${key}"]`);
+        if (input) {
+          input.value = el.textContent.trim();
+          syncDisplays();
+        }
+      });
+      el.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          el.blur();
+        }
+      });
+    });
+
+    form?.addEventListener("input", syncDisplays);
+
+    showPw?.addEventListener("change", () => {
+      if (pwInput) pwInput.type = showPw.checked ? "text" : "password";
+    });
+
+    syncDisplays();
+
+    const restoreScroll = () => {
+      const savedScroll = sessionStorage.getItem(scrollKey);
+      if (savedScroll) {
+        const y = parseInt(savedScroll, 10) || 0;
+        window.scrollTo({ top: y, left: 0, behavior: "instant" });
+        sessionStorage.removeItem(scrollKey);
+      }
+    };
+    requestAnimationFrame(restoreScroll);
+    setTimeout(restoreScroll, 50);
+
+    if (joinDateEl) {
+      const iso = joinDateEl.dataset.joinDate || "";
+      const converter = window.formatJalaliDate;
+      if (iso && typeof converter === "function") {
+        const jalali = converter(iso);
+        joinDateEl.textContent = jalali || "نامشخص";
+      } else {
+        joinDateEl.textContent = iso || "نامشخص";
+      }
+    }
+
+    const flashes = document.querySelectorAll(".flash");
+    if (flashes.length) {
+      setTimeout(() => {
+        flashes.forEach((flash) => {
+          flash.classList.add("fade-out");
+          setTimeout(() => (flash.style.display = "none"), 450);
+        });
+      }, 5000);
+    }
+  });
+</script>
+{% endblock %}
