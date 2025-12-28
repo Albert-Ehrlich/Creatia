@@ -41,6 +41,27 @@
     el.addEventListener("scroll", listener);
   };
 
+  const safeJsonParse = (val, fallback) => {
+    if (!val) return fallback;
+    try {
+      return JSON.parse(val);
+    } catch (err) {
+      return fallback;
+    }
+  };
+
+  const escapeHtml = (str = "") =>
+    String(str).replace(/[&<>\"']/g, (ch) => {
+      const map = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      };
+      return map[ch] || ch;
+    });
+
   /**
    * Navbar links active state on scroll
    */
@@ -677,6 +698,904 @@
     } catch (err) {
       badgeEls.forEach((el) => (el.hidden = true));
     }
+  };
+
+  const initUserCardProgress = () => {
+    document
+      .querySelectorAll(".user-card__progress-bar[data-progress]")
+      .forEach((bar) => {
+        const raw = Number(bar.dataset.progress);
+        const pct = Math.max(0, Math.min(100, Number.isFinite(raw) ? raw : 0));
+        bar.style.width = `${pct}%`;
+        bar.setAttribute("aria-valuenow", String(pct));
+      });
+  };
+
+  const initChatPage = () => {
+    const chatRoot = document.querySelector(".chat-page");
+    if (!chatRoot) return;
+    const userPairs = safeJsonParse(chatRoot.dataset.chatUserMap, []);
+    const userLookup = {};
+    userPairs.forEach((pair) => {
+      if (!Array.isArray(pair) || pair.length < 2) return;
+      const [id, name] = pair;
+      userLookup[String(id)] = name;
+    });
+    const targetButtons = chatRoot.querySelectorAll(".chat-target");
+    const messagesBox = chatRoot.querySelector("[data-chat-messages]");
+    const titleEl = chatRoot.querySelector("[data-chat-title]");
+    const subtitleEl = chatRoot.querySelector("[data-chat-subtitle]");
+    const form = document.getElementById("chatForm");
+    const textarea = form?.querySelector("textarea[name='body']");
+    const groupBadge = chatRoot.querySelector("[data-badge='group']");
+    const privateBadges = chatRoot.querySelectorAll("[data-badge]");
+
+    let currentTarget = "group";
+    let lastId = null;
+    let poller = null;
+
+    const labelFor = (target) => {
+      if (target === "group") {
+        return { title: "گپ گروهی", subtitle: "همه کاربران" };
+      }
+      const name = userLookup[target] || "کاربر";
+      return { title: `گفتگو با ${name}`, subtitle: "پیام خصوصی" };
+    };
+
+    const renderMessages = (msgs, append = false) => {
+      if (!messagesBox) return;
+      if (!append) messagesBox.innerHTML = "";
+      if (!msgs.length && !append) {
+        messagesBox.innerHTML = '<p class="chat-empty">پیامی ثبت نشده است.</p>';
+        return;
+      }
+      if (append && msgs.length) {
+        messagesBox.querySelectorAll(".chat-empty").forEach((n) => n.remove());
+      }
+      msgs.forEach((m) => {
+        const item = document.createElement("div");
+        item.className = `chat-msg${m.is_mine ? " chat-msg--mine" : ""}`;
+        const author = document.createElement("div");
+        author.className = "chat-msg__meta";
+        author.textContent = m.is_mine ? "شما" : m.sender_name || "کاربر";
+        const body = document.createElement("div");
+        body.className = "chat-msg__body";
+        body.textContent = m.body;
+        item.append(author, body);
+        if (m.can_delete) {
+          const actions = document.createElement("div");
+          actions.className = "chat-msg__actions";
+          const delBtn = document.createElement("button");
+          delBtn.type = "button";
+          delBtn.className = "chat-msg__delete";
+          delBtn.textContent = "حذف";
+          delBtn.addEventListener("click", async () => {
+            const ok = confirm("این پیام حذف شود؟");
+            if (!ok) return;
+            await deleteMessage(m.id);
+          });
+          actions.appendChild(delBtn);
+          item.appendChild(actions);
+        }
+        messagesBox.appendChild(item);
+      });
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    };
+
+    const refreshUnread = async () => {
+      try {
+        const res = await fetch("/api/chat/unread", { cache: "no-cache" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (groupBadge) {
+          const g = Number(data.group) || 0;
+          groupBadge.textContent = g;
+          groupBadge.hidden = g <= 0;
+        }
+        privateBadges.forEach((b) => {
+          const peer = b.dataset.badge;
+          const rawVal =
+            peer === "group" ? data.group : (data.privates || {})[peer];
+          const num = Number(rawVal) || 0;
+          b.textContent = num;
+          b.hidden = num <= 0;
+        });
+      } catch (err) {
+        /* ignore */
+      }
+    };
+
+    const loadMessages = async (initial = false) => {
+      const url = new URL("/api/chat/messages", window.location.origin);
+      url.searchParams.set("target", currentTarget);
+      if (lastId) url.searchParams.set("after", lastId);
+      url.searchParams.set("mark_read", "1");
+      try {
+        const res = await fetch(url.toString(), { cache: "no-cache" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.length) {
+          lastId = data[data.length - 1].id;
+          renderMessages(data, true);
+        } else if (initial) {
+          renderMessages([], false);
+        }
+        await refreshUnread();
+      } catch (err) {
+        console.warn("Chat load failed", err);
+      }
+    };
+
+    const deleteMessage = async (id) => {
+      try {
+        const res = await fetch(`/api/chat/messages/${id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "امکان حذف پیام نیست.");
+          return;
+        }
+        await refreshUnread();
+        resetAndLoad();
+      } catch (err) {
+        alert("حذف پیام انجام نشد.");
+      }
+    };
+
+    const resetAndLoad = () => {
+      lastId = null;
+      renderMessages([], false);
+      loadMessages(true);
+      if (poller) clearInterval(poller);
+      poller = setInterval(() => loadMessages(false), 5000);
+    };
+
+    const activateTarget = (target) => {
+      const btn = chatRoot.querySelector(`.chat-target[data-target="${target}"]`);
+      if (!btn) return false;
+      targetButtons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentTarget = target;
+      const labels = labelFor(target);
+      if (titleEl) titleEl.textContent = labels.title;
+      if (subtitleEl) subtitleEl.textContent = labels.subtitle;
+      form?.querySelector('input[name="target"]')?.setAttribute("value", target);
+      resetAndLoad();
+      return true;
+    };
+
+    targetButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.target || "group";
+        if (target === currentTarget) return;
+        activateTarget(target);
+      });
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const initialTarget = params.get("target");
+    const activated =
+      initialTarget && initialTarget !== "group"
+        ? activateTarget(initialTarget)
+        : false;
+    if (!activated) {
+      resetAndLoad();
+    }
+
+    form?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!textarea || !textarea.value.trim()) return;
+      const body = textarea.value.trim();
+      try {
+        const res = await fetch("/api/chat/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ target: currentTarget, body }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          alert(data.error || "ارسال پیام با خطا مواجه شد.");
+          return;
+        }
+        const msg = await res.json();
+        textarea.value = "";
+        lastId = msg.id;
+        renderMessages([msg], true);
+        await refreshUnread();
+      } catch (err) {
+        alert("ارتباط با سرور برقرار نشد.");
+      }
+    });
+
+    textarea?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        form?.requestSubmit?.();
+      }
+    });
+
+    refreshUnread().then(resetAndLoad);
+  };
+
+  const initManageUsersPage = () => {
+    const root = document.querySelector("[data-manage-users]");
+    if (!root) return;
+    const roles = safeJsonParse(root.dataset.roleOptions, []);
+    const groupForm = document.getElementById("createGroupForm");
+    const userForm = document.getElementById("createUserForm");
+
+    groupForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(groupForm);
+      const rolesSelect = Array.from(
+        document.getElementById("groupRoles")?.selectedOptions || []
+      ).map((o) => o.value);
+      const newRole = (fd.get("new_role") || "").trim();
+      if (newRole) rolesSelect.push(newRole);
+      const payload = {
+        name: fd.get("name"),
+        permissions: JSON.stringify({
+          roles: rolesSelect,
+          note: fd.get("permissions") || "",
+        }),
+      };
+      const res = await fetch("/api/roles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        alert("Could not create group");
+      } else {
+        location.reload();
+      }
+    });
+
+    userForm?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(userForm);
+      const payload = {
+        username: fd.get("username"),
+        email: fd.get("email"),
+        password: fd.get("password"),
+        role: fd.get("role"),
+      };
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        alert("Could not create user");
+      } else {
+        location.reload();
+      }
+    });
+
+    const passwordInput = userForm?.querySelector('input[name="password"]');
+    const showPw = document.getElementById("showCreatePassword");
+    showPw?.addEventListener("change", () => {
+      if (passwordInput) passwordInput.type = showPw.checked ? "text" : "password";
+    });
+
+    const buildRoleOptions = (current) =>
+      roles
+        .map((role) => {
+          const value = escapeHtml(role);
+          const selected = role === current ? ' selected="selected"' : "";
+          return `<option value="${value}"${selected}>${value}</option>`;
+        })
+        .join("");
+
+    const openEditModal = (user) => {
+      const overlay = document.createElement("div");
+      overlay.className = "manage-modal";
+      const dialog = document.createElement("div");
+      dialog.className = "manage-modal__card";
+      dialog.innerHTML = `
+        <h3>Edit User</h3>
+        <form class="stacked-form manage-form" id="editUserForm">
+          <input type="text" name="username" value="${escapeHtml(
+            user.username || ""
+          )}" required />
+          <input type="email" name="email" value="${escapeHtml(
+            user.email || ""
+          )}" required />
+          <input type="password" name="password" placeholder="New password (optional)" />
+          <label class="compact-label checkbox-inline"><input type="checkbox" id="editShowPw"> Show password</label>
+          <select name="role">
+            ${buildRoleOptions(user.role)}
+          </select>
+          <label class="compact-label checkbox-inline"><input type="checkbox" name="is_active" ${
+            user.is_active ? "checked" : ""
+          }> Active</label>
+          <div class="manage-modal__actions">
+            <button type="submit" class="submit-btn">Save</button>
+            <button type="button" class="ghost-btn" id="editCancel">Cancel</button>
+          </div>
+        </form>
+      `;
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+      const form = dialog.querySelector("#editUserForm");
+      const select = form.querySelector('select[name="role"]');
+      select.value = user.role;
+      const pwInput = form.querySelector('input[name="password"]');
+      const show = form.querySelector("#editShowPw");
+      show?.addEventListener("change", () => {
+        if (pwInput) pwInput.type = show.checked ? "text" : "password";
+      });
+      dialog.querySelector("#editCancel")?.addEventListener("click", () => overlay.remove());
+      form.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const fd = new FormData(form);
+        const payload = {
+          username: fd.get("username"),
+          email: fd.get("email"),
+          role: fd.get("role"),
+          is_active: form.querySelector('input[name="is_active"]').checked,
+        };
+        const pw = fd.get("password");
+        if (pw) payload.password = pw;
+        const res = await fetch(`/api/admin/users/${user.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          alert("Could not update user");
+        } else {
+          location.reload();
+        }
+      });
+    };
+
+    document.querySelectorAll("[data-edit-user]")?.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const user = {
+          id: btn.dataset.editUser,
+          username: btn.dataset.username,
+          email: btn.dataset.email,
+          role: btn.dataset.role,
+          is_active:
+            btn.dataset.active === "True" ||
+            btn.dataset.active === "true" ||
+            btn.dataset.active === "1",
+        };
+        openEditModal(user);
+      });
+    });
+
+    document.querySelectorAll("[data-delete-user]")?.forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.deleteUser;
+        if (!confirm("Are you sure you want to delete this user?")) return;
+        const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE" });
+        if (!res.ok) {
+          alert("Could not delete user");
+        } else {
+          location.reload();
+        }
+      });
+    });
+  };
+
+  const initProfilePage = () => {
+    const page = document.querySelector("[data-profile-page]");
+    if (!page) return;
+    window.history.scrollRestoration = "manual";
+    const editBtn = document.getElementById("editProfileBtn");
+    const cancelBtn = document.getElementById("cancelProfileEdit");
+    const form = document.getElementById("profileForm");
+    const editPens = document.querySelectorAll(".edit-pen");
+    const showPw = document.getElementById("showProfilePw");
+    const pwInput = form?.querySelector('input[name="password"]');
+    const pwField = document.querySelector(".editable-password");
+    const pwLink = document.getElementById("togglePasswordField");
+    const editableDisplays = document.querySelectorAll("[data-edit-target]");
+    const joinDateEl = document.querySelector("[data-join-date]");
+    const defaultEditText = editBtn?.dataset.defaultText || "Edit profile";
+    const saveText = "Save";
+    const scrollKey = "profileScrollY";
+    const resumeClip = document.querySelector(".resume-clip");
+    const resumeInput = document.getElementById("resumeInput");
+    const resumePlaceholder = document.querySelector("[data-resume-placeholder]");
+    const resumeError = document.querySelector("[data-resume-error]");
+    const resumeLink = document.querySelector(".profile-resume-link");
+    const avatarInput = document.getElementById("avatarInput");
+    const avatarPreview = document.querySelector("[data-avatar-preview]");
+    const avatarHandles = document.querySelectorAll(".avatar-handle");
+    const avatarScaleInput = form?.querySelector('input[name="avatar_scale"]');
+    const avatarOffsetXInput = form?.querySelector('input[name="avatar_offset_x"]');
+    const avatarOffsetYInput = form?.querySelector('input[name="avatar_offset_y"]');
+    const avatarControls = document.querySelector(".avatar-controls");
+    const responsibilityInput = form?.querySelector('input[name="responsibility"]');
+    const fileRows = document.querySelectorAll(".files-card .file-row");
+    const fileInputs = document.querySelectorAll('.files-card input[type="file"]');
+    const filePills = document.querySelectorAll(".files-card .file-upload-pill");
+    const fileRemoveButtons = document.querySelectorAll(".files-card [data-remove-btn]");
+    const fileRemoveInputs = document.querySelectorAll(".files-card [data-remove-input]");
+    const uploadBase = page.dataset.uploadBase || "";
+
+    const initialState = {
+      avatar: {
+        src: avatarPreview?.getAttribute("src") || "",
+        scale: avatarScaleInput?.value || "1",
+        offsetX: avatarOffsetXInput?.value || "0",
+        offsetY: avatarOffsetYInput?.value || "0",
+      },
+      resume: {
+        href: resumeLink?.getAttribute("href") || "#",
+        storedPath: resumeLink?.dataset.storedPath || "",
+        hidden: resumeLink?.hasAttribute("hidden"),
+        placeholderText:
+          resumePlaceholder?.textContent?.trim() || "رزومه ثبت نشده",
+        placeholderHidden: resumePlaceholder?.hasAttribute("hidden"),
+      },
+    };
+
+    const isEditing = () => page?.classList.contains("editing");
+    const openFileInput = (input) => {
+      if (!input) return;
+      input.disabled = false;
+      input.removeAttribute("disabled");
+      input.tabIndex = 0;
+      if (typeof input.showPicker === "function") {
+        try {
+          input.showPicker();
+          return;
+        } catch (err) {
+          /* fall back to click when showPicker is not available */
+        }
+      }
+      input.click();
+    };
+    const toggleFileMode = (editing) => {
+      fileInputs.forEach((input) => {
+        if (editing) {
+          input.disabled = false;
+          input.removeAttribute("disabled");
+          input.tabIndex = 0;
+        } else {
+          input.disabled = true;
+          input.setAttribute("disabled", "disabled");
+          input.tabIndex = -1;
+        }
+      });
+      fileRemoveButtons.forEach((btn) => {
+        btn.disabled = !editing;
+      });
+    };
+    const showFileAttachment = (row, input) => {
+      const label =
+        row.querySelector(".file-label")?.textContent?.trim() || "File";
+      const link = row.querySelector("[data-file-link]");
+      const nameSpan = row.querySelector("[data-file-name]");
+      const storedPath = row.dataset.storedPath;
+      const chosen =
+        input.dataset.selectedName ||
+        input.files?.[0]?.name ||
+        nameSpan?.textContent?.trim();
+      if (storedPath && link && !link.hasAttribute("hidden")) {
+        window.open(link.href, "_blank");
+        return;
+      }
+      alert(
+        chosen ? `${label}: ${chosen}` : `${label}: هیچ فایلی پیوست نشده است`
+      );
+    };
+
+    const syncFormFromDisplays = () => {
+      editableDisplays.forEach((el) => {
+        const key = el.dataset.editTarget;
+        const input = form?.querySelector(`[name="${key}"]`);
+        if (input) input.value = el.textContent.trim();
+      });
+      if (avatarInput && avatarInput.files?.length === 0) {
+        avatarInput.value = "";
+      }
+      if (responsibilityInput) {
+        responsibilityInput.value =
+          document
+            .querySelector('[data-edit-target="responsibility"]')
+            ?.textContent.trim() || responsibilityInput.value;
+      }
+    };
+
+    const syncDisplays = () => {
+      const displays = document.querySelectorAll("[data-display]");
+      const active = document.activeElement;
+      displays.forEach((el) => {
+        if (el === active && el.getAttribute("contenteditable") === "true") {
+          return;
+        }
+        const key = el.dataset.display;
+        const formInput = form?.querySelector(`[name="${key}"]`);
+        const val = formInput?.value?.trim();
+        el.textContent = val || el.dataset.placeholder || "";
+      });
+    };
+
+    const startEditing = () => {
+      page?.classList.add("editing");
+      toggleFileMode(true);
+      syncFormFromDisplays();
+      if (editBtn) editBtn.textContent = saveText;
+      if (cancelBtn) cancelBtn.hidden = false;
+      editableDisplays.forEach((el) => {
+        el.contentEditable = "true";
+        el.classList.add("is-editing");
+      });
+      if (avatarControls) avatarControls.style.display = "flex";
+    };
+    const stopEditing = () => {
+      form?.reset();
+      page?.classList.remove("editing");
+      toggleFileMode(false);
+      fileInputs.forEach((input) => {
+        input.dataset.selectedName = "";
+      });
+      fileRows.forEach((row) => {
+        const nameSpan = row.querySelector("[data-file-name]");
+        const link = row.querySelector("[data-file-link]");
+        const removeInput = row.querySelector("[data-remove-input]");
+        const storedName = row.dataset.storedName || "";
+        const storedPath = row.dataset.storedPath || "";
+        if (nameSpan) nameSpan.textContent = storedName;
+        if (link) {
+          if (storedPath) {
+            link.href = `${uploadBase}${storedPath}`;
+            link.removeAttribute("hidden");
+          } else {
+            link.setAttribute("hidden", "");
+            link.href = "#";
+          }
+        }
+        if (removeInput) removeInput.disabled = true;
+        row.classList.remove("file-removed");
+      });
+      document
+        .querySelectorAll(".editable-field.field-editing")
+        .forEach((node) => node.classList.remove("field-editing"));
+      syncDisplays();
+      if (resumeInput) resumeInput.value = "";
+      if (avatarInput) avatarInput.value = "";
+      if (avatarPreview && initialState.avatar.src) {
+        avatarPreview.src = initialState.avatar.src;
+        avatarPreview.style.transform = `translate(${initialState.avatar.offsetX}%, ${initialState.avatar.offsetY}%) scale(${initialState.avatar.scale})`;
+      }
+      if (avatarScaleInput) avatarScaleInput.value = initialState.avatar.scale;
+      if (avatarOffsetXInput) avatarOffsetXInput.value = initialState.avatar.offsetX;
+      if (avatarOffsetYInput) avatarOffsetYInput.value = initialState.avatar.offsetY;
+      if (resumeLink) {
+        if (initialState.resume.hidden) resumeLink.setAttribute("hidden", "");
+        else resumeLink.removeAttribute("hidden");
+        resumeLink.href = initialState.resume.href || "#";
+        resumeLink.dataset.storedPath = initialState.resume.storedPath || "";
+        resumeLink.onclick = null;
+      }
+      if (resumeError) resumeError.hidden = true;
+      if (resumePlaceholder) {
+        resumePlaceholder.textContent = initialState.resume.placeholderText;
+        if (initialState.resume.placeholderHidden) {
+          resumePlaceholder.hidden = true;
+        } else {
+          resumePlaceholder.hidden = false;
+        }
+      }
+      if (pwInput) pwInput.type = showPw?.checked ? "text" : "password";
+      if (editBtn) editBtn.textContent = defaultEditText;
+      if (cancelBtn) cancelBtn.hidden = true;
+      editableDisplays.forEach((el) => {
+        el.contentEditable = "false";
+        el.classList.remove("is-editing");
+      });
+      if (avatarControls) avatarControls.style.display = "none";
+    };
+
+    editBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      const editing = page?.classList.contains("editing");
+      if (editing) {
+        syncFormFromDisplays();
+        sessionStorage.setItem(scrollKey, String(window.scrollY || 0));
+        if (form?.requestSubmit) form.requestSubmit();
+        else form?.submit();
+      } else {
+        startEditing();
+      }
+    });
+    cancelBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      stopEditing();
+    });
+
+    editPens.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.target;
+        const isHero = btn.classList.contains("edit-pen--hero");
+        startEditing();
+        if (isHero) {
+          const editable = document.querySelector(
+            `[data-edit-target="${target}"]`
+          );
+          if (editable) {
+            editable.focus();
+            const range = document.createRange();
+            range.selectNodeContents(editable);
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } else {
+          const input = form?.querySelector(`[name="${target}"]`);
+          if (input) {
+            input.focus();
+            if (input.setSelectionRange && input.value.length) {
+              input.setSelectionRange(input.value.length, input.value.length);
+            }
+          }
+        }
+      });
+    });
+
+    if (joinDateEl?.dataset.joinDate) {
+      const formatted = window.formatJalaliDate?.(joinDateEl.dataset.joinDate);
+      if (formatted) joinDateEl.textContent = formatted;
+    }
+
+    resumeClip?.addEventListener("click", (e) => {
+      e.preventDefault();
+      startEditing();
+      openFileInput(resumeInput);
+    });
+    resumeLink?.addEventListener("click", (e) => {
+      const storedPath = resumeLink.dataset.storedPath;
+      if (!storedPath && !isEditing()) {
+        e.preventDefault();
+        return;
+      }
+      if (!resumeInput || isEditing()) return;
+      e.preventDefault();
+      showFileAttachment(
+        resumeLink.closest(".profile-hero__resume"),
+        resumeInput
+      );
+    });
+    resumeInput?.addEventListener("change", () => {
+      resumeError && (resumeError.hidden = true);
+      if (!resumeInput.files?.length) return;
+      const file = resumeInput.files[0];
+      if (file.type !== "application/pdf") {
+        resumeError.textContent = "فقط فایل PDF مجاز است.";
+        resumeError.hidden = false;
+        resumeInput.value = "";
+        return;
+      }
+      if (file.size > 4 * 1024 * 1024) {
+        resumeError.textContent = "حجم فایل باید کمتر از ۴ مگابایت باشد.";
+        resumeError.hidden = false;
+        resumeInput.value = "";
+        return;
+      }
+      if (resumePlaceholder) {
+        resumePlaceholder.textContent = file.name;
+        resumePlaceholder.hidden = false;
+      }
+      if (resumeLink) {
+        resumeLink.setAttribute("hidden", "");
+        resumeLink.href = "#";
+        resumeLink.dataset.storedPath = "";
+      }
+    });
+
+    const updatePwField = (show) => {
+      if (!pwField) return;
+      const field = pwField.querySelector("input");
+      if (!field) return;
+      field.type = show ? "text" : "password";
+    };
+
+    showPw?.addEventListener("change", () => {
+      updatePwField(showPw.checked);
+    });
+
+    pwLink?.addEventListener("click", (e) => {
+      e.preventDefault();
+      const active = pwField?.classList.contains("field-editing");
+      if (!active) {
+        pwField?.classList.add("field-editing");
+        const input = pwField?.querySelector("input");
+        input?.focus();
+      } else {
+        pwField?.classList.remove("field-editing");
+        const input = pwField?.querySelector("input");
+        if (input) input.value = "";
+      }
+    });
+
+    const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+    const applyTransform = () => {
+      const scale = clamp(Number(avatarScaleInput?.value || 1), 0.6, 2.8);
+      const x = clamp(Number(avatarOffsetXInput?.value || 0), -50, 50);
+      const y = clamp(Number(avatarOffsetYInput?.value || 0), -50, 50);
+      if (avatarPreview)
+        avatarPreview.style.transform = `translate(${x}%, ${y}%) scale(${scale})`;
+      if (avatarScaleInput) avatarScaleInput.value = String(scale);
+      if (avatarOffsetXInput) avatarOffsetXInput.value = String(x);
+      if (avatarOffsetYInput) avatarOffsetYInput.value = String(y);
+    };
+    avatarHandles.forEach((handle) => {
+      handle.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        if (!avatarControls?.style.display || avatarControls.style.display === "none")
+          return;
+        let startX = e.clientX;
+        let startY = e.clientY;
+        const startScale = Number(avatarScaleInput?.value || 1);
+        const startOffsetX = Number(avatarOffsetXInput?.value || 0);
+        const startOffsetY = Number(avatarOffsetYInput?.value || 0);
+        const onMove = (ev) => {
+          ev.preventDefault();
+          const dx = ev.clientX - startX;
+          const dy = ev.clientY - startY;
+          const factor = handle.classList.contains("avatar-handle--tl")
+            ? -1
+            : 1;
+          avatarScaleInput.value = String(startScale + (dx + dy) * 0.01 * factor);
+          avatarOffsetXInput.value = String(startOffsetX + dx * 0.2);
+          avatarOffsetYInput.value = String(startOffsetY + dy * 0.2);
+          applyTransform();
+        };
+        const onUp = () => {
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+        };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+      });
+    });
+
+    avatarInput?.addEventListener("change", () => {
+      if (!avatarInput.files?.length || !avatarPreview) return;
+      const file = avatarInput.files[0];
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        avatarPreview.src = ev.target?.result || avatarPreview.src;
+        applyTransform();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    document.querySelectorAll("[data-edit-target]").forEach((node) => {
+      node.addEventListener("focus", (e) => {
+        e.target.classList.add("field-editing");
+      });
+      node.addEventListener("blur", (e) => {
+        e.target.classList.remove("field-editing");
+      });
+      node.addEventListener("input", () => {
+        syncFormFromDisplays();
+      });
+    });
+
+    filePills.forEach((pill) => {
+      pill.addEventListener("click", () => {
+        const input = pill.querySelector('input[type="file"]');
+        if (input) {
+          input.dataset.selectedName = "";
+          openFileInput(input);
+        }
+      });
+      pill.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          const input = pill.querySelector('input[type="file"]');
+          if (input) {
+            input.dataset.selectedName = "";
+            openFileInput(input);
+          }
+        }
+      });
+    });
+
+    fileInputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        const row = input.closest(".file-row");
+        if (!row) return;
+        const label = row.querySelector(".file-label")?.textContent?.trim();
+        const nameSpan = row.querySelector("[data-file-name]");
+        const removeInput = row.querySelector("[data-remove-input]");
+        const file = input.files?.[0];
+        const maxSize = Number(row.dataset.maxSize || 4 * 1024 * 1024);
+        const allowExt = (row.dataset.allowExt || "")
+          .split(",")
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean);
+        if (!file) {
+          if (nameSpan) nameSpan.textContent = row.dataset.storedName || "";
+          if (removeInput) removeInput.disabled = true;
+          row.classList.remove("file-removed");
+          return;
+        }
+        if (file.size > maxSize) {
+          alert(
+            `${label || "File"} should be smaller than ${Math.round(
+              maxSize / 1024 / 1024
+            )}MB`
+          );
+          input.value = "";
+          return;
+        }
+        const ext = file.name.split(".").pop()?.toLowerCase() || "";
+        if (allowExt.length && !allowExt.includes(ext)) {
+          alert(`Allowed file types: ${allowExt.join(", ")}`);
+          input.value = "";
+          return;
+        }
+        if (nameSpan) nameSpan.textContent = file.name;
+        input.dataset.selectedName = file.name;
+        if (removeInput) removeInput.disabled = true;
+        row.classList.remove("file-removed");
+      });
+    });
+
+    fileRemoveButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const row = btn.closest(".file-row");
+        if (!row) return;
+        const input = row.querySelector('input[type="file"]');
+        const removeInput = row.querySelector("[data-remove-input]");
+        const nameSpan = row.querySelector("[data-file-name]");
+        if (input) input.value = "";
+        if (nameSpan) nameSpan.textContent = row.dataset.storedName || "";
+        if (removeInput) removeInput.disabled = false;
+        row.classList.add("file-removed");
+      });
+    });
+
+    document.querySelectorAll("[data-toggle-profile-form]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const target = btn.dataset.toggleProfileForm;
+        const section = document.getElementById(target);
+        if (!section) return;
+        const isHidden = section.hasAttribute("hidden");
+        if (isHidden) {
+          section.removeAttribute("hidden");
+          btn.textContent = "بستن فرم";
+        } else {
+          section.setAttribute("hidden", "");
+          btn.textContent = "افزودن فایل جدید";
+        }
+      });
+    });
+
+    document.querySelectorAll(".editable-field").forEach((field) => {
+      const editControl = field.querySelector(".field-edit-btn");
+      const input = field.querySelector("input, textarea");
+      const tag = input?.tagName?.toLowerCase();
+      editControl?.addEventListener("click", () => {
+        field.classList.toggle("field-editing");
+        if (tag === "textarea") {
+          input.focus();
+          input.setSelectionRange(input.value.length, input.value.length);
+        } else {
+          input?.focus();
+        }
+      });
+    });
+
+    const storedScroll = sessionStorage.getItem(scrollKey);
+    if (storedScroll) {
+      window.scrollTo({ top: Number(storedScroll) || 0 });
+      sessionStorage.removeItem(scrollKey);
+    }
+
+    toggleFileMode(false);
+    syncDisplays();
+    applyTransform();
   };
 
   const taskStore = {
@@ -2622,6 +3541,10 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     initGlobalsFromDom();
+    initUserCardProgress();
+    initChatPage();
+    initManageUsersPage();
+    initProfilePage();
     initPasswordVisibility();
     fetchUnreadMailCount();
     fetchChatUnread();

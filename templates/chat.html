@@ -1,9 +1,18 @@
 {% extends "base.html" %}
 {% block title %}Chat{% endblock %}
 {% block content %}
-{% set user_list = users | map(attribute='id') | list %}
-{% set users_payload = users | map(attribute='__dict__') %}
-<div class="content-wrapper chat-page">
+{% set chat_users = namespace(ids=[], lookup=[]) %}
+{% for u in users %}
+  {% set _ = chat_users.ids.append(u.id) %}
+  {% set _ = chat_users.lookup.append([u.id, u.full_name or u.username]) %}
+{% endfor %}
+<div
+  class="content-wrapper chat-page"
+  data-chat-current-user-id="{{ user.id }}"
+  data-chat-current-user-name="{{ (user.full_name or user.username)|e }}"
+  data-chat-user-ids='{{ chat_users.ids | tojson }}'
+  data-chat-user-map='{{ chat_users.lookup | tojson }}'
+>
   <section class="content-header">
     <div class="page-header">
       <div>
@@ -66,216 +75,4 @@
     </div>
   </section>
 </div>
-
-<script>
-  (() => {
-    const currentUser = {
-      id: {{ user.id }},
-      name: {{ (user.full_name or user.username)|tojson }}
-    };
-    const users = {{ users | map(attribute='id') | list | tojson }};
-    const userLookup = {};
-    {% for u in users %}
-      userLookup[{{ u.id }}] = {{ (u.full_name or u.username)|tojson }};
-    {% endfor %}
-
-    const targetButtons = document.querySelectorAll(".chat-target");
-    const messagesBox = document.querySelector("[data-chat-messages]");
-    const titleEl = document.querySelector("[data-chat-title]");
-    const subtitleEl = document.querySelector("[data-chat-subtitle]");
-    const form = document.getElementById("chatForm");
-    const textarea = form?.querySelector("textarea[name='body']");
-    const groupBadge = document.querySelector("[data-badge='group']");
-    const privateBadges = document.querySelectorAll("[data-badge]");
-
-    let currentTarget = "group";
-    let lastId = null;
-    let poller = null;
-
-    const labelFor = (target) => {
-      if (target === "group") {
-        return { title: "گپ گروهی", subtitle: "همه کاربران" };
-      }
-      const name = userLookup[target] || "کاربر";
-      return { title: `گفتگو با ${name}`, subtitle: "پیام خصوصی" };
-    };
-
-    const renderMessages = (msgs, append = false) => {
-      if (!messagesBox) return;
-      if (!append) messagesBox.innerHTML = "";
-      if (!msgs.length && !append) {
-        messagesBox.innerHTML = '<p class="chat-empty">پیامی ثبت نشده است.</p>';
-        return;
-      }
-      if (append && msgs.length) {
-        messagesBox
-          .querySelectorAll(".chat-empty")
-          .forEach((n) => n.remove());
-      }
-      msgs.forEach((m) => {
-        const item = document.createElement("div");
-        item.className = `chat-msg${m.is_mine ? " chat-msg--mine" : ""}`;
-        const author = document.createElement("div");
-        author.className = "chat-msg__meta";
-        author.textContent = m.is_mine ? "شما" : m.sender_name || "کاربر";
-        const body = document.createElement("div");
-        body.className = "chat-msg__body";
-        body.textContent = m.body;
-        item.append(author, body);
-        if (m.can_delete) {
-          const actions = document.createElement("div");
-          actions.className = "chat-msg__actions";
-          const delBtn = document.createElement("button");
-          delBtn.type = "button";
-          delBtn.className = "chat-msg__delete";
-          delBtn.textContent = "حذف";
-          delBtn.addEventListener("click", async () => {
-            const ok = confirm("این پیام حذف شود؟");
-            if (!ok) return;
-            await deleteMessage(m.id);
-          });
-          actions.appendChild(delBtn);
-          item.appendChild(actions);
-        }
-        messagesBox.appendChild(item);
-      });
-      messagesBox.scrollTop = messagesBox.scrollHeight;
-    };
-
-    const loadMessages = async (initial = false) => {
-      const url = new URL("/api/chat/messages", window.location.origin);
-      url.searchParams.set("target", currentTarget);
-      if (lastId) url.searchParams.set("after", lastId);
-      url.searchParams.set("mark_read", "1");
-      try {
-        const res = await fetch(url.toString(), { cache: "no-cache" });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.length) {
-          lastId = data[data.length - 1].id;
-          renderMessages(data, true);
-        } else if (initial) {
-          renderMessages([], false);
-        }
-        await refreshUnread();
-      } catch (err) {
-        console.warn("Chat load failed", err);
-      }
-    };
-
-    const resetAndLoad = () => {
-      lastId = null;
-      renderMessages([], false);
-      loadMessages(true);
-      if (poller) clearInterval(poller);
-      poller = setInterval(() => loadMessages(false), 5000);
-    };
-
-    const refreshUnread = async () => {
-      try {
-        const res = await fetch("/api/chat/unread", { cache: "no-cache" });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (groupBadge) {
-          const g = Number(data.group) || 0;
-          groupBadge.textContent = g;
-          groupBadge.hidden = g <= 0;
-        }
-        privateBadges.forEach((b) => {
-          const peer = b.dataset.badge;
-          const rawVal =
-            peer === "group"
-              ? data.group
-              : (data.privates || {})[peer];
-          const num = Number(rawVal) || 0;
-          b.textContent = num;
-          b.hidden = num <= 0;
-        });
-      } catch (err) {
-        /* ignore */
-      }
-    };
-
-    const deleteMessage = async (id) => {
-      try {
-        const res = await fetch(`/api/chat/messages/${id}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          alert(data.error || "امکان حذف پیام نیست.");
-          return;
-        }
-        await refreshUnread();
-        resetAndLoad();
-      } catch (err) {
-        alert("حذف پیام انجام نشد.");
-      }
-    };
-
-    const activateTarget = (target) => {
-      const btn = document.querySelector(`.chat-target[data-target="${target}"]`);
-      if (!btn) return false;
-      targetButtons.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-      currentTarget = target;
-      const labels = labelFor(target);
-      if (titleEl) titleEl.textContent = labels.title;
-      if (subtitleEl) subtitleEl.textContent = labels.subtitle;
-      form.querySelector('input[name="target"]').value = target;
-      resetAndLoad();
-      return true;
-    };
-
-    targetButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const target = btn.dataset.target || "group";
-        if (target === currentTarget) return;
-        activateTarget(target);
-      });
-    });
-
-    const params = new URLSearchParams(window.location.search);
-    const initialTarget = params.get("target");
-    const activated =
-      initialTarget && initialTarget !== "group" ? activateTarget(initialTarget) : false;
-    if (!activated) {
-      resetAndLoad();
-    }
-
-    form?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!textarea || !textarea.value.trim()) return;
-      const body = textarea.value.trim();
-      try {
-        const res = await fetch("/api/chat/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ target: currentTarget, body }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          alert(data.error || "ارسال پیام با خطا مواجه شد.");
-          return;
-        }
-        const msg = await res.json();
-        textarea.value = "";
-        lastId = msg.id;
-        renderMessages([msg], true);
-        await refreshUnread();
-      } catch (err) {
-        alert("ارتباط با سرور برقرار نشد.");
-      }
-    });
-
-    textarea?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        form?.requestSubmit?.();
-      }
-    });
-
-    refreshUnread().then(resetAndLoad);
-  })();
-</script>
 {% endblock %}
